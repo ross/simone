@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+SOURCES="*.py */*.py"
+
+black --line-length=80 --skip-string-normalization --skip-magic-trailing-comma $SOURCES

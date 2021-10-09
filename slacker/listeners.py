@@ -32,5 +32,9 @@ class SlackAdapter(object):
         self.log.debug('handle_member_left_channel: event=%s', event)
 
 
-app = App(token=environ["SLACK_BOT_TOKEN"], signing_secret=environ["SLACK_SIGNING_SECRET"], token_verification_enabled=not settings.DEBUG)
+app = App(
+    token=environ["SLACK_BOT_TOKEN"],
+    signing_secret=environ["SLACK_SIGNING_SECRET"],
+    token_verification_enabled=not settings.DEBUG,
+)
 adapter = SlackAdapter(app)
