@@ -6,6 +6,7 @@ from .listeners import app
 
 handler = SlackRequestHandler(app=app)
 
+
 @csrf_exempt
 def slack_events_handler(request: HttpRequest):
     return handler.handle(request)
