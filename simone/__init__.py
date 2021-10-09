@@ -22,9 +22,29 @@ class Simone(object):
     def event(self, event):
         self.logger.debug('event: event=%s', event)
 
+        # TODO: queue things here and process them in a worker pool...
+
+        if event.text.startswith('.'):
+            # TODO: allow other whitespace
+            name, args = event.text[1:].split(' ', 1)
+            self.logger.debug('event:   searching commands, name=%s', name)
+            for command in self.commands:
+                if name == command.NAME:
+                    self.logger.debug('event:     match, command=%s', command)
+                    # TODO: built-in arg parsing, if so maybe replace this...
+                    if args.startswith('help'):
+                        command.help(event)
+                    else:
+                        command.handle(event)
+                    return
+            self.logger.debug('event:   nothing interested')
+            return
+
         # TODO: fuzzy/nlp matching
+        # TODO: did you mean...
         # TODO: certainty required & quality of matching
         # TODO: acl's
+        # TODO: translation support
         interested = []
         for interaction in self.interactions:
             self.logger.debug('event:   interaction=%s', interaction)
@@ -47,7 +67,7 @@ class Simone(object):
             self.logger.debug('event:   nothing interested')
             return False
 
-        # TODO: multiple and pick a winner? multiple and fire? 
+        # TODO: multiple and pick a winner? multiple and fire?
         return interested[0].handle(event)
 
     # TODO: convert this into an interaction

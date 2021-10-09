@@ -80,22 +80,6 @@ class SlackAdapter(object):
         def _message(event, *args, **kwargs):
             self.member_left_channel(event)
 
-        for command in simone.commands:
-            @self.slack_app.command(f'/{command.NAME}')
-            def _command(body, ack):
-                self.command(command, body, ack)
-
-    def command(self, command, body, ack):
-        self.logger.debug('command: command=%s, body=%s, ack=***', command,
-                          body)
-        # immediately ack, showing the command in channel
-        ack('', response_type='in_channel')
-
-        # TODO: convert body into a payload of some sort, that allows
-        # replies, akin to message
-        command.handle(body)
-        self.say(text='TODO...', channel=body['channel_id'])
-
     def message(self, event):
         self.logger.debug('message: event=%s', event)
         if event.get('subtype', 'message') not in self.INTERESTING:
@@ -123,7 +107,6 @@ class SlackAdapter(object):
                 #    'user': 'USLACKBOT'
                 #}
                 return
-
             channel_type = self.CHANNEL_TYPES[event['channel_type']]
             event = SlackMessageEvent(adapter=self, sender=sender, text=text,
                                       channel=channel,

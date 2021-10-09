@@ -6,9 +6,10 @@ from .base import Command
 
 
 class Stonks(Command):
-    NAME = 'simone-stonks'
+    NAME = 'stonks'
 
-    def handle(self, body):
-        # TODO:
-        from pprint import pprint
-        pprint(body)
+    def help(self, event):
+        event.reply('TODO: help')
+
+    def handle(self, event):
+        event.reply('TODO: stuff')
