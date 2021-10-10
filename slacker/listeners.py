@@ -5,21 +5,7 @@ from os import environ
 from slack_bolt import App
 import re
 
-
-class ChannelType(Enum):
-    PUBLIC = auto()
-    PRIVATE = auto()
-    DIRECT = auto()
-
-    @classmethod
-    def lookup(cls, val):
-        return {
-            'C': cls.PUBLIC,
-            'G': cls.PRIVATE,
-            'channel': cls.PUBLIC,
-            'group': cls.PRIVATE,
-            'im': cls.DIRECT,
-        }[val]
+from .models import Channel
 
 
 class SenderType(Enum):
@@ -149,7 +135,7 @@ class SlackListener(object):
                         text,
                     )
                 return
-            channel_type = ChannelType.lookup(channel_type)
+            channel_type = Channel.Type.lookup(channel_type)
 
             self.dispatcher.message(
                 text=text,
@@ -172,7 +158,7 @@ class SlackListener(object):
         self.log.debug('member_joined_channel: event=%s', event)
         inviter = event.get('inviter', None)
         channel = event['channel']
-        channel_type = ChannelType.lookup(event['channel_type'])
+        channel_type = self._channel_type(channel)
         joiner = event['user']
         team = event['team']
         event_ts = event['event_ts']
@@ -194,11 +180,37 @@ class SlackListener(object):
                 timestamp=event_ts,
             )
 
+    def _channel_info(self, channel_id):
+        resp = self.app.client.conversations_info(channel=channel_id)
+        return resp.data['channel']
+
+    def _channel_type(self, channel_id):
+        '''
+        Return the channel_type and fetch info and record channel in the db if
+        not already there.
+        '''
+        try:
+            channel = Channel.objects.get(id=channel_id)
+            return channel.channel_type
+        except Channel.DoesNotExist:
+            pass
+        channel = self._channel_info(channel_id)
+        if channel['is_channel']:
+            channel_type = Channel.Type.PUBLIC
+        elif channel['is_group']:
+            channel_type = Channel.Type.PRIVATE
+        else:
+            channel_type = Channel.Type.DIRECT
+        Channel.objects.create(
+            id=channel['id'], name=channel['name'], channel_type=channel_type
+        )
+        return channel_type
+
     def member_left_channel(self, event):
         self.log.debug('member_left_channel: event=%s', event)
         kicker = event.get('inviter', None)
         channel = event['channel']
-        channel_type = ChannelType.lookup(event['channel_type'])
+        channel_type = Channel.Type.lookup(event['channel_type'])
         leaver = event['user']
         team = event['team']
         event_ts = event['event_ts']

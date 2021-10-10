@@ -1,7 +1,8 @@
-from mock import MagicMock
-from unittest import TestCase
+from mock import MagicMock, patch
+from django.test import TestCase
 
-from .listeners import ChannelType, SenderType, SlackListener
+from .models import Channel
+from .listeners import SenderType, SlackListener
 
 
 class DummyApp(object):
@@ -47,7 +48,7 @@ class TestSlackListener(TestCase):
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633815504.005800',
@@ -88,7 +89,7 @@ class TestSlackListener(TestCase):
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             thread='1633815504.005800',
             timestamp='1633815602.006000',
@@ -112,7 +113,7 @@ class TestSlackListener(TestCase):
             sender='B01GTBL1MJN',
             sender_type=SenderType.BOT,
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team=None,
             thread=None,
             timestamp='1633888275.007000',
@@ -149,13 +150,14 @@ class TestSlackListener(TestCase):
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
             channel='C01UTGR299A',
-            channel_type=ChannelType.PRIVATE,
+            channel_type=Channel.Type.PRIVATE,
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633816328.000200',
         )
 
-    def test_joined_and_left(self):
+    @patch('slacker.listeners.SlackListener._channel_info')
+    def test_joined_and_left(self, channel_info_mock):
         app = DummyApp()
         dispatcher = MagicMock()
         listener = SlackListener(dispatcher=dispatcher, app=app)
@@ -172,15 +174,23 @@ class TestSlackListener(TestCase):
             'inviter': 'U01GQ7UFKFX',
             'event_ts': '1633815284.005500',
         }
+        channel_info_mock.reset_mock()
+        channel_info_mock.side_effect = [
+            {'id': 'C01GTHYEU4B', 'name': '#bot-dev', 'is_channel': True}
+        ]
         dispatcher.reset_mock()
         listener.member_joined_channel(member_joined_channel)
+        channel_info_mock.assert_called_once_with('C01GTHYEU4B')
         dispatcher.added.assert_called_once_with(
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             inviter='U01GQ7UFKFX',
             timestamp='1633815284.005500',
         )
+        ch = Channel.objects.get(id='C01GTHYEU4B')
+        self.assertEquals('#bot-dev', ch.name)
+        self.assertEquals(Channel.Type.PUBLIC, ch.channel_type)
 
         # bot removed from public channel
         message = {
@@ -194,12 +204,13 @@ class TestSlackListener(TestCase):
             'event_ts': '1633814854.000100',
             'channel_type': 'im',
         }
+        channel_info_mock.reset_mock()
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
             # TODO: once we map
             # channel='C01GTHYEU4B',
-            # channel_type=ChannelType.PUBLIC,
+            # channel_type=Channel.Type.PUBLIC,
             channel='#bot-dev',
             channel_type=None,
             team='T01GZF7DHKN',
@@ -217,13 +228,20 @@ class TestSlackListener(TestCase):
             'inviter': 'U01GQ7UFKFX',
             'event_ts': '1633816538.000800',
         }
+        channel_info_mock.reset_mock()
+        channel_info_mock.side_effect = [
+            {
+                'id': 'C01UTGR299A',
+                'name': '#bot-dev-private',
+                'is_channel': False,
+                'is_group': True,
+            }
+        ]
         dispatcher.reset_mock()
         listener.member_joined_channel(member_joined_channel)
         dispatcher.added.assert_called_once_with(
             channel='C01UTGR299A',
-            # TODO: once it's correct
-            # channel_type=ChannelType.PRIVATE,
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PRIVATE,
             team='T01GZF7DHKN',
             inviter='U01GQ7UFKFX',
             timestamp='1633816538.000800',
@@ -240,12 +258,13 @@ class TestSlackListener(TestCase):
             'event_ts': '1633816442.000100',
             'channel_type': 'im',
         }
+        channel_info_mock.reset_mock()
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
             # TODO: once we map
             # channel='C01GTHYEU4B',
-            # channel_type=ChannelType.PUBLIC,
+            # channel_type=Channel.Type.PUBLIC,
             channel='#bot-dev-private',
             channel_type=None,
             team='T01GZF7DHKN',
@@ -272,13 +291,14 @@ class TestSlackListener(TestCase):
             'team': 'T01GZF7DHKN',
             'event_ts': '1633815843.006500',
         }
+        channel_info_mock.reset_mock()
         dispatcher.reset_mock()
         listener.message(message)
         listener.member_joined_channel(member_joined_channel)
         dispatcher.joined.assert_called_once_with(
             joiner='U01GQ7UFKFX',
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             # TODO: what about when invited
             inviter=None,
@@ -295,12 +315,13 @@ class TestSlackListener(TestCase):
             'team': 'T01GZF7DHKN',
             'event_ts': '1633815668.006400',
         }
+        channel_info_mock.reset_mock()
         dispatcher.reset_mock()
         listener.member_left_channel(member_left_channel)
         dispatcher.left.assert_called_once_with(
             leaver='U01GQ7UFKFX',
             channel='C01GTHYEU4B',
-            channel_type=ChannelType.PUBLIC,
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             # TODO: what about when kicked by someone
             kicker=None,
