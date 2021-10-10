@@ -208,11 +208,8 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
-            # TODO: once we map
-            # channel='C01GTHYEU4B',
-            # channel_type=Channel.Type.PUBLIC,
-            channel='#bot-dev',
-            channel_type=None,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
             remover='U01GQ7UFKFX',
             timestamp='1633814854.000100',
@@ -262,11 +259,8 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
-            # TODO: once we map
-            # channel='C01GTHYEU4B',
-            # channel_type=Channel.Type.PUBLIC,
-            channel='#bot-dev-private',
-            channel_type=None,
+            channel='C01UTGR299A',
+            channel_type=Channel.Type.PRIVATE,
             team='T01GZF7DHKN',
             remover='U01GQ7UFKFX',
             timestamp='1633816442.000100',

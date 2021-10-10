@@ -107,24 +107,31 @@ class SlackListener(object):
                 # TODO: translations?
                 match = self._RE_REMOVED_FROM.match(text)
                 if match:
-                    # The bot has been removed from a channel, the message is
-                    # an `im` though so the channel is USLACKBOT's DM with the
-                    # bot. We'll have to piece together the info we want here
-                    # :-(
-                    channel_name = match.group('channel_name')
+                    # work around the lack of info in the removed message by
+                    # looking up our stored channel info
+                    name = match.group('channel_name')
+                    try:
+                        channel = Channel.objects.get(team_id=team, name=name)
+                        channel_type = channel.channel_type
+                        channel = channel.id
+                    except Channel.DoesNotExist:
+                        self.log.warn(
+                            'message: removed from an unknown channel, team=%s, name=%s',
+                            team,
+                            name,
+                        )
+                        channel = name
+                        channel_type = None
+
                     user = match.group('user')
                     self.log.info(
                         'message:   the bot has been removed from %s by %s',
                         channel,
                         user,
                     )
-                    # TODO: map channel_name to channel info to get id & type
-                    # https://api.slack.com/methods/conversations.list (though
-                    # worry when removed from private we wont see it anymore so
-                    # maybe stored?
                     self.dispatcher.removed(
-                        channel=channel_name,
-                        channel_type=None,
+                        channel=channel,
+                        channel_type=channel_type,
                         team=team,
                         remover=user,
                         timestamp=ts,
@@ -158,9 +165,9 @@ class SlackListener(object):
         self.log.debug('member_joined_channel: event=%s', event)
         inviter = event.get('inviter', None)
         channel = event['channel']
-        channel_type = self._channel_type(channel)
-        joiner = event['user']
         team = event['team']
+        channel_type = self._channel_type(channel, team)
+        joiner = event['user']
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
             self.dispatcher.added(
@@ -184,7 +191,7 @@ class SlackListener(object):
         resp = self.app.client.conversations_info(channel=channel_id)
         return resp.data['channel']
 
-    def _channel_type(self, channel_id):
+    def _channel_type(self, channel_id, team_id):
         '''
         Return the channel_type and fetch info and record channel in the db if
         not already there.
@@ -202,7 +209,10 @@ class SlackListener(object):
         else:
             channel_type = Channel.Type.DIRECT
         Channel.objects.create(
-            id=channel['id'], name=channel['name'], channel_type=channel_type
+            id=channel['id'],
+            team_id=team_id,
+            name=channel['name'],
+            channel_type=channel_type,
         )
         return channel_type
 

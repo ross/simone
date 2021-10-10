@@ -65,8 +65,12 @@ class Channel(models.Model):
             }[val]
 
     id = models.CharField(max_length=16, primary_key=True)
+    team_id = models.CharField(max_length=16)
     name = models.CharField(max_length=255)
     channel_type = models.CharField(max_length=7, choices=Type.choices)
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('team_id', 'name'),)
