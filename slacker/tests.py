@@ -53,6 +53,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633815504.005800',
+            mentions=[],
         )
 
         # message from a user in a public channel thread
@@ -94,6 +95,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread='1633815504.005800',
             timestamp='1633815602.006000',
+            mentions=[],
         )
 
         # message from another bot in a public channel
@@ -118,6 +120,7 @@ class TestSlackListener(TestCase):
             team=None,
             thread=None,
             timestamp='1633888275.007000',
+            mentions=[],
         )
 
         # message from a user in a private channel
@@ -155,6 +158,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633816328.000200',
+            mentions=[],
         )
 
         # message that will be edited
@@ -194,6 +198,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633912633.008700',
+            mentions=[],
         )
 
         # edited version
@@ -270,6 +275,7 @@ class TestSlackListener(TestCase):
             thread=None,
             timestamp='1633912640.008800',
             previous_timestamp='1633912633.008700',
+            mentions=[],
         )
 
         # message in thread that will be edited
@@ -314,6 +320,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread='1633912633.008700',
             timestamp='1633981229.008900',
+            mentions=[],
         )
         # edited version
         message = {
@@ -396,6 +403,7 @@ class TestSlackListener(TestCase):
             thread=None,
             timestamp='1633981255.009100',
             previous_timestamp='1633981229.008900',
+            mentions=[],
         )
 
     @patch('slacker.listeners.SlackListener._channel_info')
@@ -610,8 +618,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633911893.007300',
-            # TODO:
-            # mentions=[]
+            mentions=[],
         )
 
         # message in public channel with command leader `.`
@@ -651,6 +658,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633911893.007300',
+            mentions=[],
         )
         dispatcher.message.assert_not_called()
 
@@ -694,6 +702,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread='1633912633.008700',
             timestamp='1633990282.009400',
+            mentions=[],
         )
         dispatcher.message.assert_not_called()
 
@@ -702,7 +711,7 @@ class TestSlackListener(TestCase):
         message = {
             'client_msg_id': '878bf483-05f5-45d5-b14a-2814b9920a9d',
             'type': 'message',
-            'text': 'hello <@U01V6PW6XDE> blah blah',
+            'text': 'hello <@U01V6PW6XDE> and <@U01V6PW6XDF> blah blah',
             'user': 'U01GQ7UFKFX',
             'ts': '1633912018.007600',
             'team': 'T01GZF7DHKN',
@@ -716,6 +725,8 @@ class TestSlackListener(TestCase):
                             'elements': [
                                 {'type': 'text', 'text': 'hello '},
                                 {'type': 'user', 'user_id': 'U01V6PW6XDE'},
+                                {'type': 'text', 'text': ' and '},
+                                {'type': 'user', 'user_id': 'U01V6PW6XDF'},
                                 {'type': 'text', 'text': ' blah blah'},
                             ],
                         }
@@ -730,9 +741,17 @@ class TestSlackListener(TestCase):
         # reusing previous message
         listener.message(message)
         dispatcher.command.assert_not_called()
-        dispatcher.message.assert_called_once()
-        # TODO:
-        # mentions=['U01V6PW6XDE]
+        dispatcher.message.assert_called_once_with(
+            text='hello <@U01V6PW6XDE> and <@U01V6PW6XDF> blah blah',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633912018.007600',
+            mentions=['U01V6PW6XDE', 'U01V6PW6XDF'],
+        )
 
         # message in public channel with front-@ mention that doesn't match our
         # bot
@@ -794,6 +813,7 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633912278.007800',
+            mentions=[],
         )
 
         # mention other user
@@ -834,6 +854,5 @@ class TestSlackListener(TestCase):
             team='T01GZF7DHKN',
             thread=None,
             timestamp='1633912414.008200',
-            # TODO:
-            # mentions=['U01JBS2C6E9']
+            mentions=['U01JBS2C6E9'],
         )

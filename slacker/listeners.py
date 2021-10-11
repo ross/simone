@@ -169,6 +169,16 @@ class SlackListener(object):
                 return
             channel_type = Channel.Type.lookup(channel_type)
 
+            try:
+                mentions = []
+                for block in message['blocks']:
+                    for element in block['elements']:
+                        for element in element['elements']:
+                            if element['type'] == 'user':
+                                mentions.append(element['user_id'])
+            except KeyError:
+                mentions = []
+
             if previous_text is not None:
                 # Note: we ignore any edited commands
                 self.dispatcher.edit(
@@ -182,9 +192,12 @@ class SlackListener(object):
                     thread=thread,
                     timestamp=ts,
                     previous_timestamp=previous_timestamp,
+                    mentions=mentions,
                 )
             else:
                 if text.startswith(self.bot_mention):
+                    if self.bot_user_id in mentions:
+                        mentions.remove(self.bot_user_id)
                     text = text.replace(f'{self.bot_mention} ', '')
                     self.dispatcher.command(
                         text=text,
@@ -195,8 +208,11 @@ class SlackListener(object):
                         team=team,
                         thread=thread,
                         timestamp=ts,
+                        mentions=mentions,
                     )
                 elif text.startswith(self.LEADER):
+                    if self.bot_user_id in mentions:
+                        mentions.remove(self.bot_user_id)
                     text = text.replace(f'{self.LEADER} ', '')
                     self.dispatcher.command(
                         text=text,
@@ -207,6 +223,7 @@ class SlackListener(object):
                         team=team,
                         thread=thread,
                         timestamp=ts,
+                        mentions=mentions,
                     )
                 else:
                     self.dispatcher.message(
@@ -218,6 +235,7 @@ class SlackListener(object):
                         team=team,
                         thread=thread,
                         timestamp=ts,
+                        mentions=mentions,
                     )
         elif channel_type == 'channel_join':
             # we're not interested in this one, we'll get it through a direct
