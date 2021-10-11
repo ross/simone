@@ -50,8 +50,8 @@ class Channel(models.Model):
     '''
 
     class Type(models.TextChoices):
-        PUBLIC = 'private'
-        PRIVATE = 'public'
+        PUBLIC = 'public'
+        PRIVATE = 'private'
         DIRECT = 'direct'
 
         @classmethod
