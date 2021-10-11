@@ -16,6 +16,7 @@ class TestSlackListener(TestCase):
         app = DummyApp()
         dispatcher = MagicMock()
         listener = SlackListener(dispatcher=dispatcher, app=app)
+        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
 
         # message from a user in a public channel
         message = {
@@ -563,3 +564,276 @@ class TestSlackListener(TestCase):
             timestamp='1633815668.006400',
         )
         dispatcher.message.assert_not_called()
+
+    def test_commands(self):
+        app = DummyApp()
+        dispatcher = MagicMock()
+        listener = SlackListener(dispatcher=dispatcher, app=app)
+
+        # message in public channel front-@ mentioning bot
+        message = {
+            'client_msg_id': '07a49c9c-af26-451d-9f63-36d2e4e77b64',
+            'type': 'message',
+            'text': '<@U01V6PW6XDE> hi there',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633911893.007300',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'gah',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'user', 'user_id': 'U01V6PW6XDE'},
+                                {'type': 'text', 'text': ' hi there'},
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633911893.007300',
+            'channel_type': 'channel',
+        }
+        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_not_called()
+        dispatcher.command.assert_called_once_with(
+            text='hi there',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633911893.007300',
+            # TODO:
+            # mentions=[]
+        )
+
+        # message in public channel with command leader `.`
+        message = {
+            'client_msg_id': '07a49c9c-af26-451d-9f63-36d2e4e77b64',
+            'type': 'message',
+            'text': '. hi there',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633911893.007300',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'gah',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'text', 'text': '. hi there'}
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633911893.007300',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.command.assert_called_once_with(
+            text='hi there',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633911893.007300',
+        )
+        dispatcher.message.assert_not_called()
+
+        # command in thread
+        message = {
+            'client_msg_id': '000340b4-210c-443e-ae68-3ce21e3aa68e',
+            'type': 'message',
+            'text': '<@U01V6PW6XDE> command in thread',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633990282.009400',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': '8o79V',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'user', 'user_id': 'U01V6PW6XDE'},
+                                {'type': 'text', 'text': ' command in thread'},
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'thread_ts': '1633912633.008700',
+            'parent_user_id': 'U01GQ7UFKFX',
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633990282.009400',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.command.assert_called_once_with(
+            text='command in thread',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread='1633912633.008700',
+            timestamp='1633990282.009400',
+        )
+        dispatcher.message.assert_not_called()
+
+        # message in public change @ mentioning bot in the middle of the
+        # message, not a command
+        message = {
+            'client_msg_id': '878bf483-05f5-45d5-b14a-2814b9920a9d',
+            'type': 'message',
+            'text': 'hello <@U01V6PW6XDE> blah blah',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633912018.007600',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'mU+tR',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'text', 'text': 'hello '},
+                                {'type': 'user', 'user_id': 'U01V6PW6XDE'},
+                                {'type': 'text', 'text': ' blah blah'},
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633912018.007600',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        # reusing previous message
+        listener.message(message)
+        dispatcher.command.assert_not_called()
+        dispatcher.message.assert_called_once()
+        # TODO:
+        # mentions=['U01V6PW6XDE]
+
+        # message in public channel with front-@ mention that doesn't match our
+        # bot
+        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
+        listener._bot_mention = None
+        dispatcher.reset_mock()
+        # reusing previous message
+        listener.message(message)
+        dispatcher.command.assert_not_called()
+        dispatcher.message.assert_called_once()
+
+    def test_rich_methods(self):
+        app = DummyApp()
+        dispatcher = MagicMock()
+        listener = SlackListener(dispatcher=dispatcher, app=app)
+        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
+
+        # message with a link to a channel
+        message = {
+            'client_msg_id': '1c880ba5-6d09-426d-8afe-1e2a847c78cd',
+            'type': 'message',
+            'text': 'you should check out <#C01JLBRLZ7X|greetings>',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633912278.007800',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'VlO',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {
+                                    'type': 'text',
+                                    'text': 'you should check out ',
+                                },
+                                {
+                                    'type': 'channel',
+                                    'channel_id': 'C01JLBRLZ7X',
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633912278.007800',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_called_once_with(
+            text='you should check out <#C01JLBRLZ7X|greetings>',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633912278.007800',
+        )
+
+        # mention other user
+        message = {
+            'client_msg_id': 'c7f5d060-2b18-41c2-a772-8017eb0d397c',
+            'type': 'message',
+            'text': 'hello there <@U01JBS2C6E9>',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633912414.008200',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': '1Jpc',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'text', 'text': 'hello there '},
+                                {'type': 'user', 'user_id': 'U01JBS2C6E9'},
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633912414.008200',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_called_once_with(
+            text='hello there <@U01JBS2C6E9>',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633912414.008200',
+            # TODO:
+            # mentions=['U01JBS2C6E9']
+        )

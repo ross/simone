@@ -21,6 +21,7 @@ class SlackListener(object):
     _RE_REMOVED_FROM = re.compile(
         r'You have been removed from (?P<channel_name>#[\w\-]+) by <@(?P<user>\w+)>'
     )
+    LEADER = '.'
 
     log = getLogger('SlackListener')
 
@@ -39,6 +40,7 @@ class SlackListener(object):
             )
         self.app = app
         self._auth_info = None
+        self._bot_mention = None
 
         @app.event("message")
         def _wrapper_message(event, *args, **kwargs):
@@ -82,6 +84,12 @@ class SlackListener(object):
     def bot_user_id(self):
         return self.auth_info['user_id']
 
+    @property
+    def bot_mention(self):
+        if self._bot_mention is None:
+            self._bot_mention = f'<@{self.bot_user_id}>'
+        return self._bot_mention
+
     def message(self, event):
         self.log.debug('message: event=%s', event)
 
@@ -101,6 +109,9 @@ class SlackListener(object):
 
         channel = event['channel']
         channel_type = event['channel_type']
+        # TODO: should we always make sure the channel exists and map the type
+        # here rather than only doing it in the remove case to be more likely
+        # to have it recorded?
 
         text = message['text']
         team = message.get('team', None)
@@ -124,6 +135,7 @@ class SlackListener(object):
                     # looking up our stored channel info
                     name = match.group('channel_name')
                     try:
+                        # TODO: what if the channel name changes
                         channel = Channel.objects.get(team_id=team, name=name)
                         channel_type = channel.channel_type
                         channel = channel.id
@@ -158,6 +170,7 @@ class SlackListener(object):
             channel_type = Channel.Type.lookup(channel_type)
 
             if previous_text is not None:
+                # Note: we ignore any edited commands
                 self.dispatcher.edit(
                     text=text,
                     previous_text=previous_text,
@@ -171,16 +184,41 @@ class SlackListener(object):
                     previous_timestamp=previous_timestamp,
                 )
             else:
-                self.dispatcher.message(
-                    text=text,
-                    sender=sender,
-                    sender_type=sender_type,
-                    channel=channel,
-                    channel_type=channel_type,
-                    team=team,
-                    thread=thread,
-                    timestamp=ts,
-                )
+                if text.startswith(self.bot_mention):
+                    text = text.replace(f'{self.bot_mention} ', '')
+                    self.dispatcher.command(
+                        text=text,
+                        sender=sender,
+                        sender_type=sender_type,
+                        channel=channel,
+                        channel_type=channel_type,
+                        team=team,
+                        thread=thread,
+                        timestamp=ts,
+                    )
+                elif text.startswith(self.LEADER):
+                    text = text.replace(f'{self.LEADER} ', '')
+                    self.dispatcher.command(
+                        text=text,
+                        sender=sender,
+                        sender_type=sender_type,
+                        channel=channel,
+                        channel_type=channel_type,
+                        team=team,
+                        thread=thread,
+                        timestamp=ts,
+                    )
+                else:
+                    self.dispatcher.message(
+                        text=text,
+                        sender=sender,
+                        sender_type=sender_type,
+                        channel=channel,
+                        channel_type=channel_type,
+                        team=team,
+                        thread=thread,
+                        timestamp=ts,
+                    )
         elif channel_type == 'channel_join':
             # we're not interested in this one, we'll get it through a direct
             # subscription
