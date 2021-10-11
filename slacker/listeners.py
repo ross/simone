@@ -84,25 +84,38 @@ class SlackListener(object):
 
     def message(self, event):
         self.log.debug('message: event=%s', event)
-        text = event['text']
-        channel = event['channel']
-        channel_type = event['channel_type']
-        team = event.get('team', None)
-        thread = event.get('thread_ts', None)
-        ts = event['ts']
 
         subtype = event.get('subtype', None)
         if subtype == 'channel_join':
             # Not interested in these, we'll get them via member_joined_channel
             return
+        elif subtype == 'message_changed':
+            message = event['message']
+            previous = event['previous_message']
+            previous_text = previous['text']
+            previous_timestamp = previous['ts']
+        else:
+            message = event
+            previous_text = None
+            previous_timestamp = None
+
+        channel = event['channel']
+        channel_type = event['channel_type']
+
+        text = message['text']
+        team = message.get('team', None)
+
+        thread = event.get('thread_ts', None)
+        ts = event['ts']
 
         if channel_type in ('channel', 'im', 'group'):
-            if 'user' in event:
-                sender = event['user']
+            if 'user' in message:
+                sender = message['user']
                 sender_type = SenderType.USER
             else:
-                sender = event['bot_id']
+                sender = message['bot_id']
                 sender_type = SenderType.BOT
+
             if sender == 'USLACKBOT':
                 # TODO: translations?
                 match = self._RE_REMOVED_FROM.match(text)
@@ -144,16 +157,30 @@ class SlackListener(object):
                 return
             channel_type = Channel.Type.lookup(channel_type)
 
-            self.dispatcher.message(
-                text=text,
-                sender=sender,
-                sender_type=sender_type,
-                channel=channel,
-                channel_type=channel_type,
-                team=team,
-                thread=thread,
-                timestamp=ts,
-            )
+            if previous_text is not None:
+                self.dispatcher.edit(
+                    text=text,
+                    previous_text=previous_text,
+                    sender=sender,
+                    sender_type=sender_type,
+                    channel=channel,
+                    channel_type=channel_type,
+                    team=team,
+                    thread=thread,
+                    timestamp=ts,
+                    previous_timestamp=previous_timestamp,
+                )
+            else:
+                self.dispatcher.message(
+                    text=text,
+                    sender=sender,
+                    sender_type=sender_type,
+                    channel=channel,
+                    channel_type=channel_type,
+                    team=team,
+                    thread=thread,
+                    timestamp=ts,
+                )
         elif channel_type == 'channel_join':
             # we're not interested in this one, we'll get it through a direct
             # subscription

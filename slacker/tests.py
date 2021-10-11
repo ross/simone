@@ -156,6 +156,247 @@ class TestSlackListener(TestCase):
             timestamp='1633816328.000200',
         )
 
+        # message that will be edited
+        message = {
+            'client_msg_id': 'a3a6ce90-396f-4be7-81c4-bacd4f35b557',
+            'type': 'message',
+            'text': 'this will be edited',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633912633.008700',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'PJ95',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {'type': 'text', 'text': 'this will be edited'}
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633912633.008700',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_called_once_with(
+            text='this will be edited',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633912633.008700',
+        )
+
+        # edited version
+        message = {
+            'type': 'message',
+            'subtype': 'message_changed',
+            'hidden': True,
+            'message': {
+                'client_msg_id': 'a3a6ce90-396f-4be7-81c4-bacd4f35b557',
+                'type': 'message',
+                'text': 'this was edited',
+                'user': 'U01GQ7UFKFX',
+                'team': 'T01GZF7DHKN',
+                'edited': {'user': 'U01GQ7UFKFX', 'ts': '1633912640.000000'},
+                'blocks': [
+                    {
+                        'type': 'rich_text',
+                        'block_id': '2X9V',
+                        'elements': [
+                            {
+                                'type': 'rich_text_section',
+                                'elements': [
+                                    {'type': 'text', 'text': 'this was edited'}
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                'ts': '1633912633.008700',
+                'source_team': 'T01GZF7DHKN',
+                'user_team': 'T01GZF7DHKN',
+            },
+            'channel': 'C01GTHYEU4B',
+            'previous_message': {
+                'client_msg_id': 'a3a6ce90-396f-4be7-81c4-bacd4f35b557',
+                'type': 'message',
+                'text': 'this will be edited',
+                'user': 'U01GQ7UFKFX',
+                'ts': '1633912633.008700',
+                'team': 'T01GZF7DHKN',
+                'blocks': [
+                    {
+                        'type': 'rich_text',
+                        'block_id': 'PJ95',
+                        'elements': [
+                            {
+                                'type': 'rich_text_section',
+                                'elements': [
+                                    {
+                                        'type': 'text',
+                                        'text': 'this will be edited',
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            },
+            'event_ts': '1633912640.008800',
+            'ts': '1633912640.008800',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_not_called()
+        dispatcher.edit.assert_called_once_with(
+            text='this was edited',
+            previous_text='this will be edited',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633912640.008800',
+            previous_timestamp='1633912633.008700',
+        )
+
+        # message in thread that will be edited
+        message = {
+            'client_msg_id': 'ec80dd64-441d-4a8c-a7ab-36af9ca04a4d',
+            'type': 'message',
+            'text': 'this thread message will be edited',
+            'user': 'U01GQ7UFKFX',
+            'ts': '1633981229.008900',
+            'team': 'T01GZF7DHKN',
+            'blocks': [
+                {
+                    'type': 'rich_text',
+                    'block_id': 'CnBA',
+                    'elements': [
+                        {
+                            'type': 'rich_text_section',
+                            'elements': [
+                                {
+                                    'type': 'text',
+                                    'text': 'this thread message will be edited',
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+            'thread_ts': '1633912633.008700',
+            'parent_user_id': 'U01GQ7UFKFX',
+            'channel': 'C01GTHYEU4B',
+            'event_ts': '1633981229.008900',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_called_once_with(
+            text='this thread message will be edited',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread='1633912633.008700',
+            timestamp='1633981229.008900',
+        )
+        # edited version
+        message = {
+            'type': 'message',
+            'subtype': 'message_changed',
+            'hidden': True,
+            'message': {
+                'client_msg_id': 'ec80dd64-441d-4a8c-a7ab-36af9ca04a4d',
+                'type': 'message',
+                'text': 'this thread message was edited',
+                'user': 'U01GQ7UFKFX',
+                'team': 'T01GZF7DHKN',
+                'edited': {'user': 'U01GQ7UFKFX', 'ts': '1633981255.000000'},
+                'blocks': [
+                    {
+                        'type': 'rich_text',
+                        'block_id': 'pndo',
+                        'elements': [
+                            {
+                                'type': 'rich_text_section',
+                                'elements': [
+                                    {
+                                        'type': 'text',
+                                        'text': 'this thread message was edited',
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                'thread_ts': '1633912633.008700',
+                'parent_user_id': 'U01GQ7UFKFX',
+                'ts': '1633981229.008900',
+                'source_team': 'T01GZF7DHKN',
+                'user_team': 'T01GZF7DHKN',
+            },
+            'channel': 'C01GTHYEU4B',
+            'previous_message': {
+                'client_msg_id': 'ec80dd64-441d-4a8c-a7ab-36af9ca04a4d',
+                'type': 'message',
+                'text': 'this thread message will be edited',
+                'user': 'U01GQ7UFKFX',
+                'ts': '1633981229.008900',
+                'team': 'T01GZF7DHKN',
+                'blocks': [
+                    {
+                        'type': 'rich_text',
+                        'block_id': 'CnBA',
+                        'elements': [
+                            {
+                                'type': 'rich_text_section',
+                                'elements': [
+                                    {
+                                        'type': 'text',
+                                        'text': 'this thread message will be edited',
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+                'thread_ts': '1633912633.008700',
+                'parent_user_id': 'U01GQ7UFKFX',
+            },
+            'event_ts': '1633981255.009100',
+            'ts': '1633981255.009100',
+            'channel_type': 'channel',
+        }
+        dispatcher.reset_mock()
+        listener.message(message)
+        dispatcher.message.assert_not_called()
+        dispatcher.edit.assert_called_once_with(
+            text='this thread message was edited',
+            previous_text='this thread message will be edited',
+            sender='U01GQ7UFKFX',
+            sender_type=SenderType.USER,
+            channel='C01GTHYEU4B',
+            channel_type=Channel.Type.PUBLIC,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633981255.009100',
+            previous_timestamp='1633981229.008900',
+        )
+
     @patch('slacker.listeners.SlackListener._channel_info')
     def test_joined_and_left(self, channel_info_mock):
         app = DummyApp()
