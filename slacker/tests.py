@@ -45,7 +45,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='testing',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -88,7 +88,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='in a thread',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -114,7 +114,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='blah blah blah',
             sender='B01GTBL1MJN',
             sender_type=SenderType.BOT,
@@ -153,7 +153,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='boo',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -194,7 +194,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='this will be edited',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -270,7 +270,7 @@ class TestSlackListener(TestCase):
         listener.message(message)
         dispatcher.message.assert_not_called()
         dispatcher.edit.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='this was edited',
             previous_text='this will be edited',
             sender='U01GQ7UFKFX',
@@ -318,7 +318,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='this thread message will be edited',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -400,7 +400,7 @@ class TestSlackListener(TestCase):
         listener.message(message)
         dispatcher.message.assert_not_called()
         dispatcher.edit.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='this thread message was edited',
             previous_text='this thread message will be edited',
             sender='U01GQ7UFKFX',
@@ -440,7 +440,7 @@ class TestSlackListener(TestCase):
         listener.member_joined_channel(member_joined_channel)
         channel_info_mock.assert_called_once_with('C01GTHYEU4B')
         dispatcher.added.assert_called_once_with(
-            context=listener,
+            listener=listener,
             channel='C01GTHYEU4B',
             channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
@@ -467,7 +467,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
-            context=listener,
+            listener=listener,
             channel='C01GTHYEU4B',
             channel_type=Channel.Type.PUBLIC,
             team='T01GZF7DHKN',
@@ -497,7 +497,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.member_joined_channel(member_joined_channel)
         dispatcher.added.assert_called_once_with(
-            context=listener,
+            listener=listener,
             channel='C01UTGR299A',
             channel_type=Channel.Type.PRIVATE,
             team='T01GZF7DHKN',
@@ -520,7 +520,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
-            context=listener,
+            listener=listener,
             channel='C01UTGR299A',
             channel_type=Channel.Type.PRIVATE,
             team='T01GZF7DHKN',
@@ -552,7 +552,7 @@ class TestSlackListener(TestCase):
         listener.message(message)
         listener.member_joined_channel(member_joined_channel)
         dispatcher.joined.assert_called_once_with(
-            context=listener,
+            listener=listener,
             joiner='U01GQ7UFKFX',
             channel='C01GTHYEU4B',
             channel_type=Channel.Type.PUBLIC,
@@ -576,7 +576,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.member_left_channel(member_left_channel)
         dispatcher.left.assert_called_once_with(
-            context=listener,
+            listener=listener,
             leaver='U01GQ7UFKFX',
             channel='C01GTHYEU4B',
             channel_type=Channel.Type.PUBLIC,
@@ -624,7 +624,7 @@ class TestSlackListener(TestCase):
         listener.message(message)
         dispatcher.message.assert_not_called()
         dispatcher.command.assert_called_once_with(
-            context=listener,
+            listener=listener,
             command='hi',
             text='there',
             sender='U01GQ7UFKFX',
@@ -664,7 +664,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.command.assert_called_once_with(
-            context=listener,
+            listener=listener,
             command='hi',
             text='there',
             sender='U01GQ7UFKFX',
@@ -710,7 +710,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.command.assert_called_once_with(
-            context=listener,
+            listener=listener,
             command='command',
             text='in thread',
             sender='U01GQ7UFKFX',
@@ -759,7 +759,7 @@ class TestSlackListener(TestCase):
         listener.message(message)
         dispatcher.command.assert_not_called()
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='hello <@U01V6PW6XDE> and <@U01V6PW6XDF> blah blah',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -823,7 +823,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='you should check out <#C01JLBRLZ7X|greetings>',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -865,7 +865,7 @@ class TestSlackListener(TestCase):
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.message.assert_called_once_with(
-            context=listener,
+            listener=listener,
             text='hello there <@U01JBS2C6E9>',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,

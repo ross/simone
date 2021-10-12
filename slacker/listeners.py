@@ -169,7 +169,7 @@ class SlackListener(object):
                         user,
                     )
                     self.dispatcher.removed(
-                        context=self,
+                        listener=self,
                         channel=channel,
                         channel_type=channel_type,
                         team=team,
@@ -197,7 +197,7 @@ class SlackListener(object):
             if previous_text is not None:
                 # Note: we ignore any edited commands
                 self.dispatcher.edit(
-                    context=self,
+                    listener=self,
                     text=text,
                     previous_text=previous_text,
                     sender=sender,
@@ -219,7 +219,7 @@ class SlackListener(object):
                     command, text = text.split(' ', 1)
                     text = text.lstrip()
                     self.dispatcher.command(
-                        context=self,
+                        listener=self,
                         command=command,
                         text=text,
                         sender=sender,
@@ -241,7 +241,7 @@ class SlackListener(object):
                     command, text = text.split(' ', 1)
                     text = text.lstrip()
                     self.dispatcher.command(
-                        context=self,
+                        listener=self,
                         command=command,
                         text=text,
                         sender=sender,
@@ -255,7 +255,7 @@ class SlackListener(object):
                     )
                 else:
                     self.dispatcher.message(
-                        context=self,
+                        listener=self,
                         text=text,
                         sender=sender,
                         sender_type=sender_type,
@@ -283,7 +283,7 @@ class SlackListener(object):
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
             self.dispatcher.added(
-                context=self,
+                listener=self,
                 channel=channel,
                 channel_type=channel_type,
                 team=team,
@@ -292,7 +292,7 @@ class SlackListener(object):
             )
         else:
             self.dispatcher.joined(
-                context=self,
+                listener=self,
                 joiner=joiner,
                 channel=channel,
                 channel_type=channel_type,
@@ -339,7 +339,7 @@ class SlackListener(object):
         team = event['team']
         event_ts = event['event_ts']
         self.dispatcher.left(
-            context=self,
+            listener=self,
             leaver=leaver,
             channel=channel,
             channel_type=channel_type,
