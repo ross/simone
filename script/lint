@@ -6,5 +6,5 @@ SOURCES="*.py */*.py"
 
 source env/bin/activate
 
-pycodestyle --ignore=E501,E741,W503 $SOURCES
+pycodestyle --ignore=E203,E501,E741,W503 $SOURCES
 pyflakes $SOURCES
