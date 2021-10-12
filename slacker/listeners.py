@@ -1,8 +1,12 @@
 from django.conf import settings
+from django.http import HttpRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.urls import path
 from enum import Enum, auto
 from logging import getLogger
 from os import environ
 from slack_bolt import App
+from slack_bolt.adapter.django import SlackRequestHandler
 import re
 
 from .models import Channel
@@ -55,6 +59,16 @@ class SlackListener(object):
             self.member_left_channel(event)
 
         # TODO: emit data from auth_info to dispatcher on startup?
+
+    def urlpatterns(self):
+
+        handler = SlackRequestHandler(app=self.app)
+
+        @csrf_exempt
+        def slack_events_handler(request: HttpRequest):
+            return handler.handle(request)
+
+        return [path("slack/events", slack_events_handler, name="slack_events")]
 
     @property
     def auth_info(self):

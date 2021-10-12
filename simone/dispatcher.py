@@ -1,12 +1,15 @@
-from django.http import HttpRequest
-from django.views.decorators.csrf import csrf_exempt
 from pprint import pprint
-from slack_bolt.adapter.django import SlackRequestHandler
 
-from .listeners import SlackListener
+from slacker.listeners import SlackListener
 
 
 class Dispatcher(object):
+    def __init__(self):
+        self.listeners = [SlackListener(self)]
+
+    def urlpatterns(self):
+        return sum([l.urlpatterns() for l in self.listeners], [])
+
     def added(*args, **kwargs):
         pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
 
@@ -27,13 +30,3 @@ class Dispatcher(object):
 
     def removed(*args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})
-
-
-dispatcher = Dispatcher()
-listener = SlackListener(dispatcher)
-handler = SlackRequestHandler(app=listener.app)
-
-
-@csrf_exempt
-def slack_events_handler(request: HttpRequest):
-    return handler.handle(request)
