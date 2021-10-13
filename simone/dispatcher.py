@@ -1,5 +1,6 @@
 from pprint import pprint
 
+from handler_memory.handlers import Memory
 from slacker.listeners import SlackListener
 
 
@@ -9,33 +10,6 @@ class Echo(object):
 
     def command(self, context, text, **kwargs):
         context.say(text)
-
-
-class Memory(object):
-    def __init__(self):
-        # TODO: this should be db backed
-        self.memory = {}
-
-    def config(self):
-        return {'commands': ('rem', 'remember', 'forget')}
-
-    def command(self, context, command, text, **kwargs):
-        if command in ('rem', 'remember'):
-            if ' is ' in text:
-                # we're recording
-                what, about = text.split(' is ', 1)
-                self.memory[what] = about
-                context.say(f"OK. I'll remember {what} is {about}")
-            elif text in self.memory:
-                context.say(f'{text} is {self.memory[text]}')
-            else:
-                context.say(f"Sorry. I don't remember anything about {text}")
-        else:  # forget
-            if text in self.memory:
-                what = self.memory.pop(text)
-                context.say(f"OK. I'll forget that {text} was {what}")
-            else:
-                context.say(f"Sorry. I don't remember anything about {text}")
 
 
 class Context(object):
