@@ -17,7 +17,7 @@ class TestSlackListener(TestCase):
         app = DummyApp()
         dispatcher = MagicMock()
         listener = SlackListener(dispatcher=dispatcher, app=app)
-        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
+        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         # message from a user in a public channel
         message = {
@@ -53,6 +53,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633815504.005800',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='testing',
             sender='U01GQ7UFKFX',
@@ -98,6 +99,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread='1633815504.005800',
                 timestamp='1633815602.006000',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='in a thread',
             sender='U01GQ7UFKFX',
@@ -126,6 +128,7 @@ class TestSlackListener(TestCase):
                 team=None,
                 thread=None,
                 timestamp='1633888275.007000',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='blah blah blah',
             sender='B01GTBL1MJN',
@@ -167,6 +170,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633816328.000200',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='boo',
             sender='U01GQ7UFKFX',
@@ -210,6 +214,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912633.008700',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='this will be edited',
             sender='U01GQ7UFKFX',
@@ -288,6 +293,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912640.008800',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='this was edited',
             previous_text='this will be edited',
@@ -338,6 +344,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633981229.008900',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='this thread message will be edited',
             sender='U01GQ7UFKFX',
@@ -422,6 +429,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633981255.009100',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='this thread message was edited',
             previous_text='this thread message will be edited',
@@ -463,6 +471,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PUBLIC,
                 team='T01GZF7DHKN',
                 timestamp='1633815284.005500',
+                bot_user_id='U01V6PW6XDE',
             ),
             inviter='U01GQ7UFKFX',
         )
@@ -492,6 +501,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PUBLIC,
                 team='T01GZF7DHKN',
                 timestamp='1633814854.000100',
+                bot_user_id='U01V6PW6XDE',
             ),
             remover='U01GQ7UFKFX',
         )
@@ -524,6 +534,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PRIVATE,
                 team='T01GZF7DHKN',
                 timestamp='1633816538.000800',
+                bot_user_id='U01V6PW6XDE',
             ),
             inviter='U01GQ7UFKFX',
         )
@@ -549,6 +560,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PRIVATE,
                 team='T01GZF7DHKN',
                 timestamp='1633816442.000100',
+                bot_user_id='U01V6PW6XDE',
             ),
             remover='U01GQ7UFKFX',
         )
@@ -583,6 +595,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PUBLIC,
                 team='T01GZF7DHKN',
                 timestamp='1633815843.006500',
+                bot_user_id='U01V6PW6XDE',
             ),
             joiner='U01GQ7UFKFX',
             # TODO: what about when invited
@@ -609,6 +622,7 @@ class TestSlackListener(TestCase):
                 channel_type=ChannelType.PUBLIC,
                 team='T01GZF7DHKN',
                 timestamp='1633815668.006400',
+                bot_user_id='U01V6PW6XDE',
             ),
             leaver='U01GQ7UFKFX',
             # TODO: what about when kicked by someone
@@ -660,6 +674,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
+                bot_user_id='U01V6PW6XDE',
             ),
             command='hi',
             text='there',
@@ -702,6 +717,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
+                bot_user_id='U01V6PW6XDE',
             ),
             command='hi',
             text='there',
@@ -750,6 +766,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633990282.009400',
+                bot_user_id='U01V6PW6XDE',
             ),
             command='command',
             text='in thread',
@@ -801,6 +818,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912018.007600',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='hello <@U01V6PW6XDE> and <@U01V6PW6XDF> blah blah',
             sender='U01GQ7UFKFX',
@@ -822,7 +840,7 @@ class TestSlackListener(TestCase):
         app = DummyApp()
         dispatcher = MagicMock()
         listener = SlackListener(dispatcher=dispatcher, app=app)
-        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
+        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         # message with a link to a channel
         message = {
@@ -867,6 +885,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912278.007800',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='you should check out <#C01JLBRLZ7X|greetings>',
             sender='U01GQ7UFKFX',
@@ -911,6 +930,7 @@ class TestSlackListener(TestCase):
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912414.008200',
+                bot_user_id='U01V6PW6XDE',
             ),
             text='hello there <@U01JBS2C6E9>',
             sender='U01GQ7UFKFX',

@@ -12,30 +12,34 @@ class Echo(object):
         context.say(text)
 
 
-class Context(object):
-    def __init__(self, listener, channel, thread):
-        self.listener = listener
-        self.channel = channel
-        self.thread = thread
+class Wave(object):
+    def config(self):
+        return {'messages': True}
 
-    def say(self, text, thread=None):
-        thread = thread or self.thread
-        self.listener.say(text, self.channel, thread)
+    def message(self, context, text, mentions, **kwargs):
+        if (
+            text.startswith('hi') or text.startswith('hello')
+        ) and context.bot_user_id in mentions:
+            context.react('wave')
 
 
 class Dispatcher(object):
     def __init__(self):
         self.listeners = [SlackListener(self)]
 
-        handlers = [Echo(), Memory()]
+        handlers = [Echo(), Memory(), Wave()]
         self.handlers = handlers
+        messages = []
         commands = {}
         for handler in handlers:
             config = handler.config()
             for command in config.get('commands', []):
                 commands[command] = handler
+            if config.get('messages', False):
+                messages.append(handler)
 
         self.commands = commands
+        self.messages = messages
 
     def urlpatterns(self):
         return sum([l.urlpatterns() for l in self.listeners], [])
@@ -65,8 +69,10 @@ class Dispatcher(object):
     def left(*args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
 
-    def message(*args, **kwargs):
-        pprint({'type': 'message', 'args': args, 'kwargs': kwargs})
+    def message(self, *args, **kwargs):
+        pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
+        for handler in self.messages:
+            handler.message(*args, **kwargs)
 
     def removed(*args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})

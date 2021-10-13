@@ -44,6 +44,11 @@ class SlackContext(BaseContext):
             channel=self.channel, text=text, thread_ts=thread
         )
 
+    def react(self, emoji):
+        self.app.client.reactions_add(
+            channel=self.channel, name=emoji, timestamp=self.timestamp
+        )
+
     def __repr__(self):
         return f'{self.__dict__}'
 
@@ -209,6 +214,7 @@ class SlackListener(object):
                             channel_type=channel_type,
                             team=team,
                             timestamp=ts,
+                            bot_user_id=self.bot_user_id,
                         ),
                         remover=user,
                     )
@@ -240,6 +246,7 @@ class SlackListener(object):
                         thread=thread,
                         team=team,
                         timestamp=ts,
+                        bot_user_id=self.bot_user_id,
                     ),
                     text=text,
                     previous_text=previous_text,
@@ -252,9 +259,15 @@ class SlackListener(object):
                 if text.startswith(self.bot_mention):
                     if self.bot_user_id in mentions:
                         mentions.remove(self.bot_user_id)
+                    # TODO: this is way to messay, refactor, clean up and test
+                    # independantly
                     text = text.replace(f'{self.bot_mention} ', '')
                     text = text.lstrip()
-                    command, text = text.split(' ', 1)
+                    try:
+                        command, text = text.split(' ', 1)
+                    except ValueError:
+                        command = text
+                        text = ''
                     text = text.lstrip()
                     self.dispatcher.command(
                         context=SlackContext(
@@ -264,6 +277,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
+                            bot_user_id=self.bot_user_id,
                         ),
                         command=command,
                         text=text,
@@ -278,7 +292,11 @@ class SlackListener(object):
                     if self.bot_user_id in mentions:
                         mentions.remove(self.bot_user_id)
                     text = text[len(self.LEADER) :]
-                    command, text = text.split(' ', 1)
+                    try:
+                        command, text = text.split(' ', 1)
+                    except ValueError:
+                        command = text
+                        text = ''
                     text = text.lstrip()
                     self.dispatcher.command(
                         context=SlackContext(
@@ -288,6 +306,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
+                            bot_user_id=self.bot_user_id,
                         ),
                         command=command,
                         text=text,
@@ -304,6 +323,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
+                            bot_user_id=self.bot_user_id,
                         ),
                         text=text,
                         sender=sender,
@@ -335,6 +355,7 @@ class SlackListener(object):
                     channel_type=channel_type,
                     team=team,
                     timestamp=event_ts,
+                    bot_user_id=self.bot_user_id,
                 ),
                 inviter=inviter,
             )
@@ -346,6 +367,7 @@ class SlackListener(object):
                     channel_type=channel_type,
                     team=team,
                     timestamp=event_ts,
+                    bot_user_id=self.bot_user_id,
                 ),
                 joiner=joiner,
                 inviter=inviter,
@@ -389,6 +411,7 @@ class SlackListener(object):
                 channel_type=channel_type,
                 team=team,
                 timestamp=event_ts,
+                bot_user_id=self.bot_user_id,
             ),
             leaver=leaver,
             kicker=kicker,
