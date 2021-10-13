@@ -9,6 +9,7 @@ from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
 import re
 
+from simone.context import BaseContext, ChannelType
 from .models import Channel
 
 
@@ -21,11 +22,44 @@ class SlackException(Exception):
     pass
 
 
+class SlackContext(BaseContext):
+    log = getLogger('SlackContext')
+
+    def __init__(self, app, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app = app
+
+    def say(self, text, reply=False):
+        self.log.debug('say: text=%s, reply=%s', text, reply)
+        if self.thread:
+            # if we're already in a thread continue there
+            thread = self.thread
+            # TODO: support include in main?
+        elif reply:
+            # if we're asked to reply start a thread
+            thread = self.timestamp
+        else:
+            thread = None
+        self.app.client.chat_postMessage(
+            channel=self.channel, text=text, thread_ts=thread
+        )
+
+    def __repr__(self):
+        return f'{self.__dict__}'
+
+
 class SlackListener(object):
     _RE_REMOVED_FROM = re.compile(
         r'You have been removed from (?P<channel_name>#[\w\-]+) by <@(?P<user>\w+)>'
     )
     LEADER = '.'
+    _CHANNEL_TYPES = {
+        'C': ChannelType.PUBLIC,
+        'G': ChannelType.PRIVATE,
+        'channel': ChannelType.PUBLIC,
+        'group': ChannelType.PRIVATE,
+        'im': ChannelType.DIRECT,
+    }
 
     log = getLogger('SlackListener')
 
@@ -151,7 +185,7 @@ class SlackListener(object):
                     try:
                         # TODO: what if the channel name changes
                         channel = Channel.objects.get(team_id=team, name=name)
-                        channel_type = channel.channel_type
+                        channel_type = channel.channel_type_enum
                         channel = channel.id
                     except Channel.DoesNotExist:
                         self.log.warn(
@@ -169,12 +203,14 @@ class SlackListener(object):
                         user,
                     )
                     self.dispatcher.removed(
-                        listener=self,
-                        channel=channel,
-                        channel_type=channel_type,
-                        team=team,
+                        context=SlackContext(
+                            app=self.app,
+                            channel=channel,
+                            channel_type=channel_type,
+                            team=team,
+                            timestamp=ts,
+                        ),
                         remover=user,
-                        timestamp=ts,
                     )
                 else:
                     self.log.warn(
@@ -182,7 +218,7 @@ class SlackListener(object):
                         text,
                     )
                 return
-            channel_type = Channel.Type.lookup(channel_type)
+            channel_type = self._CHANNEL_TYPES[channel_type]
 
             try:
                 mentions = []
@@ -197,16 +233,18 @@ class SlackListener(object):
             if previous_text is not None:
                 # Note: we ignore any edited commands
                 self.dispatcher.edit(
-                    listener=self,
+                    context=SlackContext(
+                        app=self.app,
+                        channel=channel,
+                        channel_type=channel_type,
+                        thread=thread,
+                        team=team,
+                        timestamp=ts,
+                    ),
                     text=text,
                     previous_text=previous_text,
                     sender=sender,
                     sender_type=sender_type,
-                    channel=channel,
-                    channel_type=channel_type,
-                    team=team,
-                    thread=thread,
-                    timestamp=ts,
                     previous_timestamp=previous_timestamp,
                     mentions=mentions,
                 )
@@ -219,16 +257,18 @@ class SlackListener(object):
                     command, text = text.split(' ', 1)
                     text = text.lstrip()
                     self.dispatcher.command(
-                        listener=self,
+                        context=SlackContext(
+                            app=self.app,
+                            channel=channel,
+                            channel_type=channel_type,
+                            thread=thread,
+                            team=team,
+                            timestamp=ts,
+                        ),
                         command=command,
                         text=text,
                         sender=sender,
                         sender_type=sender_type,
-                        channel=channel,
-                        channel_type=channel_type,
-                        team=team,
-                        thread=thread,
-                        timestamp=ts,
                         mentions=mentions,
                     )
                 elif (
@@ -241,29 +281,33 @@ class SlackListener(object):
                     command, text = text.split(' ', 1)
                     text = text.lstrip()
                     self.dispatcher.command(
-                        listener=self,
+                        context=SlackContext(
+                            app=self.app,
+                            channel=channel,
+                            channel_type=channel_type,
+                            thread=thread,
+                            team=team,
+                            timestamp=ts,
+                        ),
                         command=command,
                         text=text,
                         sender=sender,
                         sender_type=sender_type,
-                        channel=channel,
-                        channel_type=channel_type,
-                        team=team,
-                        thread=thread,
-                        timestamp=ts,
                         mentions=mentions,
                     )
                 else:
                     self.dispatcher.message(
-                        listener=self,
+                        context=SlackContext(
+                            app=self.app,
+                            channel=channel,
+                            channel_type=channel_type,
+                            thread=thread,
+                            team=team,
+                            timestamp=ts,
+                        ),
                         text=text,
                         sender=sender,
                         sender_type=sender_type,
-                        channel=channel,
-                        channel_type=channel_type,
-                        team=team,
-                        thread=thread,
-                        timestamp=ts,
                         mentions=mentions,
                     )
         elif channel_type == 'channel_join':
@@ -278,79 +322,74 @@ class SlackListener(object):
         inviter = event.get('inviter', None)
         channel = event['channel']
         team = event['team']
-        channel_type = self._channel_type(channel, team)
+        channel_type = self._get_or_create_channel(
+            channel, team
+        ).channel_type_enum
         joiner = event['user']
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
             self.dispatcher.added(
-                listener=self,
-                channel=channel,
-                channel_type=channel_type,
-                team=team,
+                context=SlackContext(
+                    app=self.app,
+                    channel=channel,
+                    channel_type=channel_type,
+                    team=team,
+                    timestamp=event_ts,
+                ),
                 inviter=inviter,
-                timestamp=event_ts,
             )
         else:
             self.dispatcher.joined(
-                listener=self,
+                context=SlackContext(
+                    app=self.app,
+                    channel=channel,
+                    channel_type=channel_type,
+                    team=team,
+                    timestamp=event_ts,
+                ),
                 joiner=joiner,
-                channel=channel,
-                channel_type=channel_type,
-                team=team,
                 inviter=inviter,
-                timestamp=event_ts,
             )
 
     def _channel_info(self, channel_id):
         resp = self.app.client.conversations_info(channel=channel_id)
         return resp.data['channel']
 
-    def _channel_type(self, channel_id, team_id):
-        '''
-        Return the channel_type and fetch info and record channel in the db if
-        not already there.
-        '''
+    def _get_or_create_channel(self, channel_id, team_id):
         try:
-            channel = Channel.objects.get(id=channel_id)
-            return channel.channel_type
+            return Channel.objects.get(id=channel_id)
         except Channel.DoesNotExist:
             pass
         channel = self._channel_info(channel_id)
         if channel['is_channel']:
-            channel_type = Channel.Type.PUBLIC
+            channel_type = ChannelType.PUBLIC
         elif channel['is_group']:
-            channel_type = Channel.Type.PRIVATE
+            channel_type = ChannelType.PRIVATE
         else:
-            channel_type = Channel.Type.DIRECT
-        Channel.objects.create(
+            channel_type = ChannelType.DIRECT
+        return Channel.objects.create(
             id=channel['id'],
             team_id=team_id,
             name=channel['name'],
-            channel_type=channel_type,
+            channel_type=channel_type.value,
         )
-        return channel_type
 
     def member_left_channel(self, event):
         self.log.debug('member_left_channel: event=%s', event)
         kicker = event.get('inviter', None)
         channel = event['channel']
-        channel_type = Channel.Type.lookup(event['channel_type'])
+        channel_type = self._CHANNEL_TYPES[event['channel_type']]
         leaver = event['user']
         team = event['team']
         event_ts = event['event_ts']
         self.dispatcher.left(
-            listener=self,
+            context=SlackContext(
+                app=self.app,
+                channel=channel,
+                channel_type=channel_type,
+                team=team,
+                timestamp=event_ts,
+            ),
             leaver=leaver,
-            channel=channel,
-            channel_type=channel_type,
-            team=team,
             kicker=kicker,
-            timestamp=event_ts,
-        )
-
-    def say(self, text, channel, thread=None):
-        self.log.debug('say: text=***, channel=%s, thread=%s', channel, thread)
-        # TODO: rich content
-        self.app.client.chat_postMessage(
-            channel=channel, text=text, thread_ts=thread
         )

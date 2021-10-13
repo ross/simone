@@ -1,5 +1,7 @@
 from django.db import models
 
+from simone.context import ChannelType
+
 
 class Channel(models.Model):
     '''
@@ -49,28 +51,23 @@ class Channel(models.Model):
     }
     '''
 
-    class Type(models.TextChoices):
-        PUBLIC = 'public'
-        PRIVATE = 'private'
-        DIRECT = 'direct'
-
-        @classmethod
-        def lookup(cls, val):
-            return {
-                'C': cls.PUBLIC,
-                'G': cls.PRIVATE,
-                'channel': cls.PUBLIC,
-                'group': cls.PRIVATE,
-                'im': cls.DIRECT,
-            }[val]
-
     id = models.CharField(max_length=16, primary_key=True)
     team_id = models.CharField(max_length=16)
     name = models.CharField(max_length=255)
-    channel_type = models.CharField(max_length=7, choices=Type.choices)
+    channel_type = models.CharField(
+        max_length=7, choices=[(e, e.value) for e in ChannelType]
+    )
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def channel_type_enum(self):
+        if self.channel_type == 'public':
+            return ChannelType.PUBLIC
+        elif self.channel_type == 'private':
+            return ChannelType.PRIVATE
+        return ChannelType.DIRECT
 
     class Meta:
         unique_together = (('team_id', 'name'),)

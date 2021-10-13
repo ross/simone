@@ -7,7 +7,7 @@ class Echo(object):
     def config(self):
         return {'commands': ('echo',)}
 
-    def command(self, context, text, channel, thread, **kwargs):
+    def command(self, context, text, **kwargs):
         context.say(text)
 
 
@@ -19,7 +19,7 @@ class Memory(object):
     def config(self):
         return {'commands': ('rem', 'remember', 'forget')}
 
-    def command(self, context, command, text, channel, thread, **kwargs):
+    def command(self, context, command, text, **kwargs):
         if command in ('rem', 'remember'):
             if ' is ' in text:
                 # we're recording
@@ -69,8 +69,7 @@ class Dispatcher(object):
     def added(*args, **kwargs):
         pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
 
-    def command(self, listener, command, channel, thread, *args, **kwargs):
-        context = Context(listener, channel, thread=thread)
+    def command(self, context, command, **kwargs):
         try:
             handler = self.commands[command]
         except KeyError:
@@ -81,14 +80,7 @@ class Dispatcher(object):
             context.say(f'Sorry `{command}` is not a recognized command')
         else:
             # TODO: we should catch and log all exceptions down here
-            handler.command(
-                context,
-                command=command,
-                channel=channel,
-                thread=thread,
-                *args,
-                **kwargs,
-            )
+            handler.command(context, command=command, **kwargs)
 
     def edit(*args, **kwargs):
         pprint({'type': 'edit', 'args': args, 'kwargs': kwargs})
