@@ -29,8 +29,16 @@ class SlackContext(BaseContext):
         super().__init__(*args, **kwargs)
         self.app = app
 
-    def say(self, text, reply=False):
+    def say(self, text, reply=False, to_user=False):
         self.log.debug('say: text=%s, reply=%s', text, reply)
+        if to_user:
+            self.app.client.chat_postEphemeral(
+                channel=self.channel,
+                text=text,
+                thread_ts=self.thread,
+                user=to_user,
+            )
+            return
         if self.thread:
             # if we're already in a thread continue there
             thread = self.thread

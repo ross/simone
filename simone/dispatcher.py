@@ -23,11 +23,22 @@ class Wave(object):
             context.react('wave')
 
 
+class Help(object):
+    def config(self):
+        return {'commands': ('help',)}
+
+    def command(self, context, text, sender, **kwargs):
+        # TODO: text may be the specific command they want help with
+        # TODO: search/filter commands
+        # TODO: implement something
+        context.say('TODO', to_user=sender)
+
+
 class Dispatcher(object):
     def __init__(self):
         self.listeners = [SlackListener(self)]
 
-        handlers = [Echo(), Memory(), Wave()]
+        handlers = [Echo(), Help(), Memory(), Wave()]
         self.handlers = handlers
         messages = []
         commands = {}

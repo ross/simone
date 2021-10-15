@@ -18,10 +18,24 @@ class BaseContext(object):
         self.bot_user_id = bot_user_id
         self.thread = thread
 
-    def say(self, text, reply=False):
+    def say(self, text, reply=False, to_user=False):
+        '''
+        reply: Controls whether a new thread is started with the message
+            - False: the text will be sent in the main channel unless it was
+                  already in a thread in which case the it will continue there.
+            - True: the text will be sent as a reply to the context triggering
+                  event. If the context was already in a thread it will
+                  continue there.
+        to_user: Controls the visibility of the message.
+            - False: a public response that everyone will be able to see
+            - <user-id>: a private message only visible to the specified user.
+        '''
         raise NotImplementedError('say is not implemented')
 
     def react(self, emoji):
+        '''
+        emoji: The emoji to attach to the message that generated this event.
+        '''
         raise NotImplementedError('say is not implemented')
 
     def __eq__(self, other):
