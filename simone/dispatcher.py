@@ -38,7 +38,7 @@ class Dispatcher(object):
             context.say(f'Sorry `{command}` is not a recognized command')
         else:
             # TODO: we should catch and log all exceptions down here
-            handler.command(context, command=command, **kwargs)
+            handler.command(context, command=command, dispatcher=self, **kwargs)
 
     def edit(*args, **kwargs):
         pprint({'type': 'edit', 'args': args, 'kwargs': kwargs})

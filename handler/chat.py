@@ -1,7 +1,13 @@
+from io import StringIO
+
 from simone.handlers import Registry
 
 
 class Echo(object):
+    '''
+    Echo back whatever is said
+    '''
+
     def config(self):
         return {'commands': ('echo',)}
 
@@ -13,6 +19,10 @@ Registry.register_handler(Echo())
 
 
 class Wave(object):
+    '''
+    Adds a :wave: emoji to messages that say hi to the bot user.
+    '''
+
     def config(self):
         return {'messages': True}
 
@@ -27,14 +37,44 @@ Registry.register_handler(Wave())
 
 
 class Help(object):
+    '''
+    Display a list of supported commands
+    '''
+
     def config(self):
         return {'commands': ('help',)}
 
-    def command(self, context, text, sender, **kwargs):
-        # TODO: text may be the specific command they want help with
-        # TODO: search/filter commands
-        # TODO: implement something
-        context.say('TODO', to_user=sender)
+    def help_command(self, context, text, dispatcher):
+        for command, handler in sorted(dispatcher.commands.items()):
+            if command == text:
+                context.say(f'Help for `.{text}`\n```{handler.__doc__}```')
+                return
+        context.say(f'Sorry `{text}` is not a recognized command')
+
+    def list_commands(self, context, dispatcher):
+        buf = StringIO()
+        buf.write('Supported commands:\n```')
+        # TODO: cache
+        for command, handler in sorted(dispatcher.commands.items()):
+            buf.write('  .')
+            buf.write(command)
+            try:
+                short = handler.__doc__.split('\n')[1].strip()
+                buf.write(' - ')
+                buf.write(short)
+            except AttributeError:
+                pass
+            buf.write('\n')
+        buf.write('```')
+
+        context.say(buf.getvalue())
+
+    def command(self, context, text, dispatcher, **kwargs):
+        if text:
+            self.help_command(context, text, dispatcher)
+        else:
+            # TODO: search/filter commands
+            self.list_commands(context, dispatcher)
 
 
 Registry.register_handler(Help())

@@ -3,6 +3,19 @@ from .models import Item
 
 
 class Memory(object):
+    '''
+    Store and retrieve information
+
+      To record a piece of information:
+        .rem|.remember <the thing> is <remembered info>
+
+      To recall a piece of information
+        .rem|.remember <the thing>
+
+      To forget a piece of information
+        .forget <the thing>
+    '''
+
     def config(self):
         return {'commands': ('rem', 'remember', 'forget')}
 
@@ -11,10 +24,16 @@ class Memory(object):
             if ' is ' in text:
                 # we're recording
                 key, value = text.split(' is ', 1)
-                item, _ = Item.objects.update_or_create(
-                    team_id=context.team, key=key, value=value
-                )
-                context.say(f"OK. I'll remember {item.key} is {item.value}")
+                try:
+                    item = Item.objects.get(team_id=context.team, key=key)
+                    context.say(
+                        f"Unfortunately, {item.key} is already stored as {item.value}; Try forgetting it first"
+                    )
+                except Item.DoesNotExist:
+                    item = Item.objects.create(
+                        team_id=context.team, key=key, value=value
+                    )
+                    context.say(f"OK. I'll remember {item.key} is {item.value}")
             else:
                 try:
                     item = Item.objects.get(team_id=context.team, key=text)
