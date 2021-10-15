@@ -1,3 +1,4 @@
+from simone.handlers import Registry
 from .models import Item
 
 
@@ -29,3 +30,6 @@ class Memory(object):
                 item.delete()
             except Item.DoesNotExist:
                 context.say(f"Sorry. I don't remember anything about {text}")
+
+
+Registry.register_handler(Memory())

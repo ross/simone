@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.urls import path
 
 from .dispatcher import Dispatcher
+from .handlers import Registry
 
-dispatcher = Dispatcher()
+Registry.autoload()
+dispatcher = Dispatcher(Registry.handlers)
 
 urlpatterns = dispatcher.urlpatterns() + [path('admin/', admin.site.urls)]

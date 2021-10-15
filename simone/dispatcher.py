@@ -1,45 +1,14 @@
 from pprint import pprint
 
-from handler_memory.handlers import Memory
 from slacker.listeners import SlackListener
 
 
-class Echo(object):
-    def config(self):
-        return {'commands': ('echo',)}
-
-    def command(self, context, text, **kwargs):
-        context.say(text)
-
-
-class Wave(object):
-    def config(self):
-        return {'messages': True}
-
-    def message(self, context, text, mentions, **kwargs):
-        if (
-            text.startswith('hi') or text.startswith('hello')
-        ) and context.bot_user_id in mentions:
-            context.react('wave')
-
-
-class Help(object):
-    def config(self):
-        return {'commands': ('help',)}
-
-    def command(self, context, text, sender, **kwargs):
-        # TODO: text may be the specific command they want help with
-        # TODO: search/filter commands
-        # TODO: implement something
-        context.say('TODO', to_user=sender)
-
-
 class Dispatcher(object):
-    def __init__(self):
+    def __init__(self, handlers):
+        self.handlers = handlers
+
         self.listeners = [SlackListener(self)]
 
-        handlers = [Echo(), Help(), Memory(), Wave()]
-        self.handlers = handlers
         messages = []
         commands = {}
         for handler in handlers:
