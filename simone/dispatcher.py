@@ -1,3 +1,4 @@
+from django.db import transaction
 from pprint import pprint
 
 from slacker.listeners import SlackListener
@@ -24,9 +25,11 @@ class Dispatcher(object):
     def urlpatterns(self):
         return sum([l.urlpatterns() for l in self.listeners], [])
 
+    @transaction.atomic
     def added(*args, **kwargs):
         pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
 
+    @transaction.atomic
     def command(self, context, command, **kwargs):
         try:
             handler = self.commands[command]
@@ -40,19 +43,24 @@ class Dispatcher(object):
             # TODO: we should catch and log all exceptions down here
             handler.command(context, command=command, dispatcher=self, **kwargs)
 
+    @transaction.atomic
     def edit(*args, **kwargs):
         pprint({'type': 'edit', 'args': args, 'kwargs': kwargs})
 
+    @transaction.atomic
     def joined(*args, **kwargs):
         pprint({'type': 'joined', 'args': args, 'kwargs': kwargs})
 
+    @transaction.atomic
     def left(*args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
 
+    @transaction.atomic
     def message(self, *args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
         for handler in self.messages:
             handler.message(*args, **kwargs)
 
+    @transaction.atomic
     def removed(*args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})

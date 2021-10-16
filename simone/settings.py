@@ -31,6 +31,7 @@ ALLOWED_HOSTS = environ.get('DJANGO_ALLOWED_HOSTS', '').split(';')
 INSTALLED_APPS = [
     'handler.apps.HandlerConfig',
     'handler_memory.apps.HandlerMemoryConfig',
+    'handler_sparkles.apps.HandlerSparklesConfig',
     'slacker.apps.SlackerConfig',
     'django.contrib.admin',
     'django.contrib.auth',

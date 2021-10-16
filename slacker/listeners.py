@@ -57,6 +57,9 @@ class SlackContext(BaseContext):
             channel=self.channel, name=emoji, timestamp=self.timestamp
         )
 
+    def user_mention(self, user_id):
+        return f'<@{user_id}>'
+
     def __repr__(self):
         return f'{self.__dict__}'
 
@@ -265,6 +268,8 @@ class SlackListener(object):
                 )
             else:
                 if text.startswith(self.bot_mention):
+                    # TODO: we should probably keep them if it's not the
+                    # command initiator
                     if self.bot_user_id in mentions:
                         mentions.remove(self.bot_user_id)
                     # TODO: this is way to messay, refactor, clean up and test

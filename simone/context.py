@@ -38,6 +38,9 @@ class BaseContext(object):
         '''
         raise NotImplementedError('say is not implemented')
 
+    def user_mention(self, user_id):
+        raise NotImplementedError('user_mention is not implemented')
+
     def __eq__(self, other):
         # only used in tests
         return self.__dict__ == other.__dict__
