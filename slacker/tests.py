@@ -16,6 +16,7 @@ class TestSlackListener(TestCase):
     def test_messages(self):
         app = DummyApp()
         dispatcher = MagicMock()
+        dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
@@ -443,6 +444,7 @@ class TestSlackListener(TestCase):
     def test_joined_and_left(self, channel_info_mock):
         app = DummyApp()
         dispatcher = MagicMock()
+        dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
@@ -633,6 +635,7 @@ class TestSlackListener(TestCase):
     def test_commands(self):
         app = DummyApp()
         dispatcher = MagicMock()
+        dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         # message in public channel front-@ mentioning bot
@@ -839,6 +842,7 @@ class TestSlackListener(TestCase):
     def test_rich_methods(self):
         app = DummyApp()
         dispatcher = MagicMock()
+        dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 

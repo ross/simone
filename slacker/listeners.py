@@ -236,13 +236,18 @@ class SlackListener(object):
                 return
             channel_type = self._CHANNEL_TYPES[channel_type]
 
+            bot_user_id = self.bot_user_id
             try:
                 mentions = []
-                for block in message['blocks']:
-                    for element in block['elements']:
-                        for element in element['elements']:
+                for i, block in enumerate(message['blocks']):
+                    for j, element in enumerate(block['elements']):
+                        for k, element in enumerate(element['elements']):
                             if element['type'] == 'user':
-                                mentions.append(element['user_id'])
+                                user_id = element['user_id']
+                                # ignore first mention of the bot_user_id,
+                                # it's starting a command
+                                if i + j + k != 0 or user_id != bot_user_id:
+                                    mentions.append(element['user_id'])
             except KeyError:
                 mentions = []
 
@@ -256,7 +261,7 @@ class SlackListener(object):
                         thread=thread,
                         team=team,
                         timestamp=ts,
-                        bot_user_id=self.bot_user_id,
+                        bot_user_id=bot_user_id,
                     ),
                     text=text,
                     previous_text=previous_text,
@@ -267,10 +272,6 @@ class SlackListener(object):
                 )
             else:
                 if text.startswith(self.bot_mention):
-                    # TODO: we should probably keep them if it's not the
-                    # command initiator
-                    if self.bot_user_id in mentions:
-                        mentions.remove(self.bot_user_id)
                     # TODO: this is way to messay, refactor, clean up and test
                     # independantly
                     text = text.replace(f'{self.bot_mention} ', '')
@@ -289,7 +290,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
-                            bot_user_id=self.bot_user_id,
+                            bot_user_id=bot_user_id,
                         ),
                         command=command,
                         text=text,
@@ -301,8 +302,6 @@ class SlackListener(object):
                     text.startswith(self.dispatcher.LEADER)
                     and text[len(self.dispatcher.LEADER)] != ' '
                 ):
-                    if self.bot_user_id in mentions:
-                        mentions.remove(self.bot_user_id)
                     text = text[len(self.dispatcher.LEADER) :]
                     try:
                         command, text = text.split(' ', 1)
@@ -318,7 +317,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
-                            bot_user_id=self.bot_user_id,
+                            bot_user_id=bot_user_id,
                         ),
                         command=command,
                         text=text,
@@ -335,7 +334,7 @@ class SlackListener(object):
                             thread=thread,
                             team=team,
                             timestamp=ts,
-                            bot_user_id=self.bot_user_id,
+                            bot_user_id=bot_user_id,
                         ),
                         text=text,
                         sender=sender,
