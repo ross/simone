@@ -32,6 +32,10 @@ class Sparkles(object):
             except User.DoesNotExist:
                 context.say(f"{mention} you don't have any :sparkles: yet")
             return
+        elif sender in mentions:
+            mention = context.user_mention(sender)
+            context.say(f"Nice try {mention}, you can't :sparkle: yourself")
+            return
 
         buf = StringIO()
         if ' for ' in text:
