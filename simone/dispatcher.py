@@ -1,5 +1,6 @@
 from django.db import transaction
 from io import StringIO
+from logging import getLogger
 from pprint import pprint
 from pylev import levenshtein
 
@@ -8,6 +9,8 @@ from slacker.listeners import SlackListener
 
 class Dispatcher(object):
     LEADER = '.'
+
+    log = getLogger('Dispatcher')
 
     def __init__(self, handlers):
         self.handlers = handlers
@@ -75,8 +78,15 @@ class Dispatcher(object):
 
             context.say(buf.getvalue())
         else:
-            # TODO: we should catch and log all exceptions down here
-            handler.command(context, command=command, dispatcher=self, **kwargs)
+            try:
+                handler.command(
+                    context, command=command, dispatcher=self, **kwargs
+                )
+            except Exception:
+                self.log.exception('Command "%s" failed.', command)
+                context.say(
+                    f'An error occured while running the `{self.LEADER}{command}` command.'
+                )
 
     @transaction.atomic
     def edit(*args, **kwargs):
