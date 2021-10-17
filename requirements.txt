@@ -1,5 +1,6 @@
 Django==3.2.8
 asgiref==3.4.1
+pylev==1.4.0
 pytz==2021.3
 slack-bolt==1.9.2
 slack-sdk==3.11.2

@@ -1,5 +1,7 @@
 from django.db import transaction
+from io import StringIO
 from pprint import pprint
+from pylev import levenshtein
 
 from slacker.listeners import SlackListener
 
@@ -36,11 +38,42 @@ class Dispatcher(object):
         try:
             handler = self.commands[command]
         except KeyError:
-            # TODO: translation support?
-            # TODO: respond private or in thread?
-            # TODO: generic formatting of text or just adopt slack's?
-            # TODO: levenshtein distance to find similar commands?
-            context.say(f'Sorry `{command}` is not a recognized command')
+            # score commands for "distant" from the command we received
+            commands = sorted(
+                [
+                    (levenshtein(command, name), name)
+                    for name, _ in self.commands.items()
+                ]
+            )
+            # only include things that are close enough, within 50% matches
+            cutoff = len(command) * 0.5
+            potentials = [
+                f'{self.LEADER}{name}'
+                for score, name in commands
+                if score < cutoff
+            ]
+            # build the response
+            buf = StringIO()
+            buf.write('Sorry `')
+            buf.write(command)
+            buf.write('` is not a recognized command.')
+
+            if potentials:
+                buf.write(" Maybe you're looking for `")
+
+                last = potentials.pop()
+                n = len(potentials)
+                if n > 1:
+                    buf.write('`, `'.join(potentials))
+                    buf.write('`, or `')
+                elif n == 1:
+                    buf.write(potentials[0])
+                    buf.write('` or `')
+                buf.write(last)
+
+                buf.write('`.')
+
+            context.say(buf.getvalue())
         else:
             # TODO: we should catch and log all exceptions down here
             handler.command(context, command=command, dispatcher=self, **kwargs)
