@@ -5,6 +5,8 @@ from slacker.listeners import SlackListener
 
 
 class Dispatcher(object):
+    LEADER = '.'
+
     def __init__(self, handlers):
         self.handlers = handlers
 

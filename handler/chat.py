@@ -38,36 +38,53 @@ Registry.register_handler(Wave())
 
 class Help(object):
     '''
-    Display a list of supported commands
+    Display a list of supported commands and get usage information.
+
+    To display the list of commands:
+      .help
+
+    To get the usage for a specific command:
+      .help <command-name>
     '''
+
+    def __init__(self):
+        self._command_list = None
 
     def config(self):
         return {'commands': ('help',)}
 
     def help_command(self, context, text, dispatcher):
-        for command, handler in sorted(dispatcher.commands.items()):
-            if command == text:
-                context.say(f'Help for `.{text}`\n```{handler.__doc__}```')
-                return
-        context.say(f'Sorry `{text}` is not a recognized command')
+        try:
+            # try as-is
+            handler = dispatcher.commands[text]
+            # add the leader
+            text = f'{dispatcher.LEADER}{text}'
+        except KeyError:
+            try:
+                # try skipping a . in case they did `.help .foo`
+                handler = dispatcher.commands[text[len(dispatcher.LEADER) :]]
+            except KeyError:
+                context.say(f'Sorry `{text}` is not a recognized command')
+        context.say(f'Help for `{text}`\n```{handler.__doc__}```')
 
     def list_commands(self, context, dispatcher):
-        buf = StringIO()
-        buf.write('Supported commands:\n```')
-        # TODO: cache
-        for command, handler in sorted(dispatcher.commands.items()):
-            buf.write('  .')
-            buf.write(command)
-            try:
-                short = handler.__doc__.split('\n')[1].strip()
-                buf.write(' - ')
-                buf.write(short)
-            except AttributeError:
-                pass
-            buf.write('\n')
-        buf.write('```')
+        if self._command_list is None:
+            buf = StringIO()
+            buf.write('Supported commands:\n```')
+            for command, handler in sorted(dispatcher.commands.items()):
+                buf.write('  .')
+                buf.write(command)
+                try:
+                    short = handler.__doc__.split('\n')[1].strip()
+                    buf.write(' - ')
+                    buf.write(short)
+                except AttributeError:
+                    pass
+                buf.write('\n')
+            buf.write('```')
+            self._command_list = buf.getvalue()
 
-        context.say(buf.getvalue())
+        context.say(self._command_list)
 
     def command(self, context, text, dispatcher, **kwargs):
         if text:

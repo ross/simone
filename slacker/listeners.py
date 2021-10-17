@@ -68,7 +68,6 @@ class SlackListener(object):
     _RE_REMOVED_FROM = re.compile(
         r'You have been removed from (?P<channel_name>#[\w\-]+) by <@(?P<user>\w+)>'
     )
-    LEADER = '.'
     _CHANNEL_TYPES = {
         'C': ChannelType.PUBLIC,
         'G': ChannelType.PRIVATE,
@@ -299,12 +298,12 @@ class SlackListener(object):
                         mentions=mentions,
                     )
                 elif (
-                    text.startswith(self.LEADER)
-                    and text[len(self.LEADER)] != ' '
+                    text.startswith(self.dispatcher.LEADER)
+                    and text[len(self.dispatcher.LEADER)] != ' '
                 ):
                     if self.bot_user_id in mentions:
                         mentions.remove(self.bot_user_id)
-                    text = text[len(self.LEADER) :]
+                    text = text[len(self.dispatcher.LEADER) :]
                     try:
                         command, text = text.split(' ', 1)
                     except ValueError:
