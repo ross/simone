@@ -2,4 +2,4 @@
 
 set -e
 
-nosetests "$@"
+ngrok http 8000
