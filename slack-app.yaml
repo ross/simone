@@ -1,0 +1,31 @@
+_metadata:
+  major_version: 1
+  minor_version: 1
+display_information:
+  name: simone
+features:
+  bot_user:
+    display_name: Simone
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - channels:history
+      - channels:read
+      - chat:write
+      - groups:history
+      - groups:read
+      - im:history
+      - im:read
+settings:
+  event_subscriptions:
+    request_url: https://simone.xormedia.com/slack/events
+    bot_events:
+      - member_joined_channel
+      - member_left_channel
+      - message.channels
+      - message.groups
+      - message.im
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
