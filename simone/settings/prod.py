@@ -1,6 +1,6 @@
 from os import environ
 
-DEBUG = True
+DEBUG = False
 
 DATABASES = {
     'default': {
