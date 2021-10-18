@@ -1,3 +1,5 @@
+from io import StringIO
+
 from simone.handlers import Registry
 from .models import Item
 
@@ -21,7 +23,20 @@ class Memory(object):
 
     def command(self, context, command, text, **kwargs):
         if command in ('rem', 'remember'):
-            if ' is ' in text:
+            if text[0] == '|':
+                # search
+                text = text.split('|', 1)[1].strip()
+                buf = StringIO()
+                buf.write('You might be looking one of these for:\n```')
+                for item in Item.objects.filter(
+                    team_id=context.team, key__icontains=text
+                )[:25]:
+                    buf.write('  ')
+                    buf.write(item.key)
+                    buf.write('\n')
+                buf.write('```')
+                context.say(buf.getvalue())
+            elif ' is ' in text:
                 # we're recording
                 key, value = text.split(' is ', 1)
                 try:
