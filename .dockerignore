@@ -1,0 +1,11 @@
+# Everything by default
+*
+# Explicitly include the bits we want
+!handler/**/*.py
+!handler_memory/**/*.py
+!handler_sparkles/**/*.py
+!manage.py
+!requirements.txt
+!simone/*.py
+!simone/settings/*.py
+!slacker/**/*.py
