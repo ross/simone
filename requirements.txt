@@ -1,5 +1,7 @@
 Django==3.2.8
 asgiref==3.4.1
+mysql-connector-python==8.0.26
+protobuf==3.18.1
 pylev==1.4.0
 pytz==2021.3
 slack-bolt==1.9.2
