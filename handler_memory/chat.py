@@ -26,16 +26,21 @@ class Memory(object):
             if text[0] == '|':
                 # search
                 text = text.split('|', 1)[1].strip()
-                buf = StringIO()
-                buf.write('You might be looking one of these for:\n```')
-                for item in Item.objects.filter(
+                items = Item.objects.filter(
                     team_id=context.team, key__icontains=text
-                )[:25]:
-                    buf.write('  ')
-                    buf.write(item.key)
-                    buf.write('\n')
-                buf.write('```')
-                context.say(buf.getvalue())
+                )[:25]
+                if items:
+                    buf = StringIO()
+                    buf.write('You might be looking one of these for:\n```')
+                    for item in items:
+                        buf.write('  ')
+                        buf.write(item.key)
+                        buf.write('\n')
+                    buf.write('```')
+                    msg = buf.getvalue()
+                else:
+                    msg = f"Sorry. I didn't find anything that matches `{text}`"
+                context.say(msg)
             elif ' is ' in text:
                 # we're recording
                 key, value = text.split(' is ', 1)
