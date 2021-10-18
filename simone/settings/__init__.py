@@ -5,7 +5,9 @@ from os import environ
 
 SECRET_KEY = environ['DJANGO_SECRET_KEY']
 
-ALLOWED_HOSTS = environ.get('DJANGO_ALLOWED_HOSTS', 'simone.xormedia.com').split(';')
+ALLOWED_HOSTS = environ.get(
+    'DJANGO_ALLOWED_HOSTS', 'simone.xormedia.com'
+).split(';')
 
 # Application definition
 

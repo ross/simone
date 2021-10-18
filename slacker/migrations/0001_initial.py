@@ -7,18 +7,32 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='Channel',
             fields=[
-                ('id', models.CharField(max_length=16, primary_key=True, serialize=False)),
+                (
+                    'id',
+                    models.CharField(
+                        max_length=16, primary_key=True, serialize=False
+                    ),
+                ),
                 ('name', models.CharField(max_length=255)),
-                ('channel_type', models.CharField(choices=[('private', 'Public'), ('public', 'Private'), ('direct', 'Direct')], max_length=7)),
+                (
+                    'channel_type',
+                    models.CharField(
+                        choices=[
+                            ('private', 'Public'),
+                            ('public', 'Private'),
+                            ('direct', 'Direct'),
+                        ],
+                        max_length=7,
+                    ),
+                ),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
-        ),
+        )
     ]

@@ -7,22 +7,27 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='User',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                (
+                    'id',
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name='ID',
+                    ),
+                ),
                 ('team_id', models.CharField(max_length=16)),
                 ('user_id', models.CharField(max_length=16)),
                 ('sparkles', models.IntegerField(default=0)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
-            options={
-                'unique_together': {('team_id', 'user_id')},
-            },
-        ),
+            options={'unique_together': {('team_id', 'user_id')}},
+        )
     ]

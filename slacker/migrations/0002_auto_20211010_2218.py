@@ -5,9 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('slacker', '0001_initial'),
-    ]
+    dependencies = [('slacker', '0001_initial')]
 
     operations = [
         migrations.AddField(
@@ -17,7 +15,6 @@ class Migration(migrations.Migration):
             preserve_default=False,
         ),
         migrations.AlterUniqueTogether(
-            name='channel',
-            unique_together={('team_id', 'name')},
+            name='channel', unique_together={('team_id', 'name')}
         ),
     ]

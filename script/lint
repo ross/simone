@@ -2,7 +2,7 @@
 
 set -e
 
-SOURCES="*.py */*.py"
+SOURCES="*.py */*.py */*/*.py"
 
 source env/bin/activate
 

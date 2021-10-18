@@ -27,12 +27,8 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'level': 'INFO',
             'formatter': 'simple',
-        },
-    },
-    'root': {'level': 'INFO', 'handlers': ('console',)},
-    'loggers': {
-        'django.db.backends': {
-            'level': 'INFO'
         }
     },
+    'root': {'level': 'INFO', 'handlers': ('console',)},
+    'loggers': {'django.db.backends': {'level': 'INFO'}},
 }
