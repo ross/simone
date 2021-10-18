@@ -15,8 +15,10 @@ oauth_config:
       - chat:write
       - groups:history
       - groups:read
+      - groups:write
       - im:history
       - im:read
+      - im:write
 settings:
   event_subscriptions:
     request_url: https://simone.xormedia.com/slack/events
