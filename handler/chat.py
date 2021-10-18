@@ -108,20 +108,89 @@ Registry.register_handler(Help())
 class Joke(object):
     '''
     Tell a joke
+
+    To get a random joke
+      .joke
+      .tell a joke
+      .tell me a joke
+
+    To get a random joke from a specific category
+      .joke about <category>
+      .tell a joke about <category>
+      .tell me a joke about <category>
+
+    To get a random punny joke
+      .pun
+      .pun me
+
+    To get a list of supported categories
+      .joke categories
     '''
 
-    def config(self):
-        # TODO: multi-word commands
-        return {'commands': ('joke', 'tell a joke', 'tell me a joke')}
+    BASE_URL = 'https://v2.jokeapi.dev'
 
-    def command(self, context, **kwargs):
-        # TODO: support filtering and such
-        resp = session.get('https://v2.jokeapi.dev/joke/Any?lang=en&safe-mode')
+    def __init__(self):
+        self._categories = None
+
+    def config(self):
+        return {'commands': ('joke', 'pun', 'tell a joke', 'tell me a joke')}
+
+    @property
+    def categories(self):
+        if self._categories is None:
+            resp = session.get(f'{self.BASE_URL}/categories')
+            resp.raise_for_status()
+            data = resp.json()
+
+            categories = (
+                [(c.lower(), c) for c in data['categories']]
+                + [
+                    (a['alias'].lower(), a['resolved'])
+                    for a in data['categoryAliases']
+                ]
+                + [
+                    ('tech', 'Programming'),
+                    ('anything', 'Any'),
+                    ('something', 'Any'),
+                ]
+            )
+
+            self._categories = categories
+
+        return self._categories
+
+    def find_category(self, command, text):
+        if command == 'pun':
+            return 'Pun'
+
+        text = text.lower()
+        for keyword, category in self.categories:
+            if keyword in text:
+                return category
+
+        return 'Any'
+
+    def command(self, context, command, text, **kwargs):
+        if 'categories' in text:
+            categories = ', '.join(
+                sorted(
+                    [
+                        c[0]
+                        for c in self.categories
+                        if c[0] not in ('any', 'anything', 'something')
+                    ]
+                )
+            )
+            context.say(f'I can tell you jokes about {categories}')
+            return
+
+        url = f'{self.BASE_URL}/joke/{self.find_category(command, text)}?safe-mode'
+        params = {'lang': 'en'}
+        resp = session.get(url, params=params)
         resp.raise_for_status()
         data = resp.json()
         if data['type'] == 'twopart':
             context.say(data['setup'])
-            # TODO: figure out a way to make this async
             sleep(5)
             context.say(data['delivery'])
         else:
