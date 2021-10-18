@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+from django.conf import settings
 from django.db import transaction
 from functools import wraps
 from io import StringIO
@@ -8,7 +10,20 @@ from pylev import levenshtein
 from slacker.listeners import SlackListener
 
 
+max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
+executor = ThreadPoolExecutor(max_workers=max_dispatchers)
+
+
+def background(func):
+    @wraps(func)
+    def submit(*args, **kwargs):
+        executor.submit(func, *args, **kwargs)
+
+    return submit
+
+
 def dispatch(func):
+    @background
     @transaction.atomic
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
