@@ -1,6 +1,12 @@
 from io import StringIO
+from requests import Session
+from time import sleep
 
 from simone.handlers import Registry
+
+
+session = Session()
+session.headers = {'user-agent': 'simone/0.0'}
 
 
 class Echo(object):
@@ -16,24 +22,6 @@ class Echo(object):
 
 
 Registry.register_handler(Echo())
-
-
-class Wave(object):
-    '''
-    Adds a :wave: emoji to messages that say hi to the bot user.
-    '''
-
-    def config(self):
-        return {'messages': True}
-
-    def message(self, context, text, mentions, **kwargs):
-        if (
-            text.startswith('hi') or text.startswith('hello')
-        ) and context.bot_user_id in mentions:
-            context.react('wave')
-
-
-Registry.register_handler(Wave())
 
 
 class Help(object):
@@ -113,3 +101,47 @@ class Help(object):
 
 
 Registry.register_handler(Help())
+
+
+class Joke(object):
+    '''
+    Tell a joke
+    '''
+
+    def config(self):
+        # TODO: multi-word commands
+        return {'commands': ('joke', 'tell a joke', 'tell me a joke')}
+
+    def command(self, context, **kwargs):
+        # TODO: support filtering and such
+        resp = session.get('https://v2.jokeapi.dev/joke/Any?lang=en&safe-mode')
+        resp.raise_for_status()
+        data = resp.json()
+        if data['type'] == 'twopart':
+            context.say(data['setup'])
+            # TODO: figure out a way to make this async
+            sleep(5)
+            context.say(data['delivery'])
+        else:
+            context.say(data['joke'])
+
+
+Registry.register_handler(Joke())
+
+
+class Wave(object):
+    '''
+    Adds a :wave: emoji to messages that say hi to the bot user.
+    '''
+
+    def config(self):
+        return {'messages': True}
+
+    def message(self, context, text, mentions, **kwargs):
+        if (
+            text.startswith('hi') or text.startswith('hello')
+        ) and context.bot_user_id in mentions:
+            context.react('wave')
+
+
+Registry.register_handler(Wave())

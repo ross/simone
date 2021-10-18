@@ -1,9 +1,14 @@
 Django==3.2.8
 asgiref==3.4.1
+certifi==2021.10.8
+charset-normalizer==2.0.7
+idna==3.3
 mysql-connector-python==8.0.26
 protobuf==3.18.1
 pylev==1.4.0
 pytz==2021.3
+requests==2.26.0
 slack-bolt==1.9.2
 slack-sdk==3.11.2
 sqlparse==0.4.2
+urllib3==1.26.7
