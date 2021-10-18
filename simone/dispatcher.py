@@ -1,10 +1,31 @@
 from django.db import transaction
+from functools import wraps
 from io import StringIO
 from logging import getLogger
 from pprint import pprint
 from pylev import levenshtein
 
 from slacker.listeners import SlackListener
+
+
+def dispatch(func):
+    @transaction.atomic
+    @wraps(func)
+    def wrap(self, context, *args, **kwargs):
+        try:
+            return func(self, context, *args, **kwargs)
+        except Exception:
+            self.log.exception(
+                'dispatch failed: context=%s, args=%s, kwargs=%s',
+                context,
+                args,
+                kwargs,
+            )
+            context.say(
+                'An error occured while responding to this message', reply=True
+            )
+
+    return wrap
 
 
 class Dispatcher(object):
@@ -37,7 +58,7 @@ class Dispatcher(object):
     def urlpatterns(self):
         return sum([l.urlpatterns() for l in self.listeners], [])
 
-    @transaction.atomic
+    @dispatch
     def added(*args, **kwargs):
         pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
 
@@ -77,7 +98,7 @@ class Dispatcher(object):
 
             context.say(buf.getvalue())
 
-    @transaction.atomic
+    @dispatch
     def command(self, context, command, text, **kwargs):
         try:
             # look for an exact match single word command
@@ -94,35 +115,28 @@ class Dispatcher(object):
         if not handler:
             self._did_you_mean(context, command)
         else:
-            try:
-                handler.command(
-                    context, command=command, dispatcher=self, **kwargs
-                )
-            except Exception:
-                self.log.exception('Command "%s" failed.', command)
-                context.say(
-                    f'An error occured while running the `{self.LEADER}{command}` command.'
-                )
+            handler.command(
+                context, command=command, text=text, dispatcher=self, **kwargs
+            )
 
-    @transaction.atomic
+    @dispatch
     def edit(*args, **kwargs):
         pprint({'type': 'edit', 'args': args, 'kwargs': kwargs})
 
-    @transaction.atomic
+    @dispatch
     def joined(*args, **kwargs):
         pprint({'type': 'joined', 'args': args, 'kwargs': kwargs})
 
-    @transaction.atomic
+    @dispatch
     def left(*args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
 
-    @transaction.atomic
+    @dispatch
     def message(self, *args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
         for handler in self.messages:
-            # TODO: these should all wrap with error handling
             handler.message(*args, **kwargs)
 
-    @transaction.atomic
+    @dispatch
     def removed(*args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})

@@ -18,6 +18,8 @@ class Echo(object):
         return {'commands': ('echo',)}
 
     def command(self, context, text, **kwargs):
+        if text == 'boom':
+            raise Exception(text)
         context.say(text)
 
 
