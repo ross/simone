@@ -1,6 +1,6 @@
 from io import StringIO
 
-from simone.handlers import Registry
+from simone.handlers import Registry, exclude_private
 from .models import User
 
 
@@ -21,6 +21,7 @@ class Sparkles(object):
     def config(self):
         return {'commands': ('sparkle', 'sparkles')}
 
+    @exclude_private
     def command(self, context, text, mentions, sender, **kwargs):
         if not mentions:
             mention = context.user_mention(sender)

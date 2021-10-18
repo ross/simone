@@ -1,6 +1,6 @@
 from io import StringIO
 
-from simone.handlers import Registry
+from simone.handlers import Registry, only_public
 from .models import Item
 
 
@@ -21,6 +21,7 @@ class Memory(object):
     def config(self):
         return {'commands': ('rem', 'remember', 'forget')}
 
+    @only_public
     def command(self, context, command, text, **kwargs):
         if command in ('rem', 'remember'):
             if text[0] == '|':
