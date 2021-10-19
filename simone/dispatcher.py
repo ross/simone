@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
-from django.db import transaction
+from django.db import connection, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
@@ -24,21 +24,24 @@ def background(func):
 
 def dispatch(func):
     @background
-    @transaction.atomic
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
-        try:
-            return func(self, context, *args, **kwargs)
-        except Exception:
-            self.log.exception(
-                'dispatch failed: context=%s, args=%s, kwargs=%s',
-                context,
-                args,
-                kwargs,
-            )
-            context.say(
-                'An error occured while responding to this message', reply=True
-            )
+        ret = None
+        with transaction.atomic():
+            try:
+                ret = func(self, context, *args, **kwargs)
+            except Exception:
+                self.log.exception(
+                    'dispatch failed: context=%s, args=%s, kwargs=%s',
+                    context,
+                    args,
+                    kwargs,
+                )
+                context.say(
+                    'An error occured while responding to this message', reply=True
+                )
+        connection.close()
+        return ret
 
     return wrap
 
