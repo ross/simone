@@ -38,8 +38,15 @@ def dispatch(func):
                     kwargs,
                 )
                 context.say(
-                    'An error occured while responding to this message', reply=True
+                    'An error occured while responding to this message',
+                    reply=True,
                 )
+        # We have to close the connection explicitly, if we don't things seem
+        # to "hang" somewhere in transaction.atomic() in future jobs :-(
+        # This isn't a problem in the dev server with sqlite3, but not clear if
+        # that's a difference between mysql and sqlite3 or something about dev
+        # mode.
+        # TODO: figure out what's going on here to see if we can avoid closing
         connection.close()
         return ret
 

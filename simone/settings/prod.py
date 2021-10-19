@@ -10,6 +10,7 @@ DATABASES = {
         'PASSWORD': environ['SIMONE_DB_PASSWORD'],
         'HOST': environ['SIMONE_DB_HOST'],
         'PORT': environ.get('SIMONE_DB_PORT', '3306'),
+        'CONN_MAX_AGE': 300,
     }
 }
 
