@@ -19,10 +19,12 @@ oauth_config:
       - im:history
       - im:read
       - im:write
+      - reactions:write
 settings:
   event_subscriptions:
     request_url: https://simone.xormedia.com/slack/events
     bot_events:
+      - channel_rename
       - member_joined_channel
       - member_left_channel
       - message.channels
