@@ -3,6 +3,7 @@
 # Explicitly include the bits we want
 !handler/**/*.py
 !handler_memory/**/*.py
+!handler_responder/**/*.py
 !handler_sparkles/**/*.py
 !manage.py
 !requirements.txt

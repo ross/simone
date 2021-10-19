@@ -4,8 +4,8 @@ set -e
 
 docker build -t simone:latest .
 docker rm simone-old || true
-docker rename simone simone-old
-docker stop simone-old
+docker rename simone simone-old || true
+docker stop simone-old || true
 
 . .env
 
