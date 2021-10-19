@@ -26,7 +26,6 @@ class SlackContext(BaseContext):
     log = getLogger('SlackContext')
 
     def __init__(self, app, *args, channel, **kwargs):
-        # TODO: we can get team from channel.team
         if channel.channel_type == 'public':
             channel_type = ChannelType.PUBLIC
         elif channel.channel_type == 'private':
@@ -35,6 +34,7 @@ class SlackContext(BaseContext):
             channel_type = ChannelType.DIRECT
         super().__init__(
             *args,
+            team=channel.team_id,
             channel_id=channel.id,
             channel_name=channel.name,
             channel_type=channel_type,
@@ -278,7 +278,6 @@ class SlackListener(object):
                     context=SlackContext(
                         app=self.app,
                         channel=removed_from,
-                        team=team,
                         timestamp=ts,
                         bot_user_id=self.bot_user_id,
                     ),
@@ -313,7 +312,6 @@ class SlackListener(object):
                     app=self.app,
                     channel=channel,
                     thread=thread,
-                    team=team,
                     timestamp=ts,
                     bot_user_id=bot_user_id,
                 ),
@@ -341,7 +339,6 @@ class SlackListener(object):
                         app=self.app,
                         channel=channel,
                         thread=thread,
-                        team=team,
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
@@ -367,7 +364,6 @@ class SlackListener(object):
                         app=self.app,
                         channel=channel,
                         thread=thread,
-                        team=team,
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
@@ -383,7 +379,6 @@ class SlackListener(object):
                         app=self.app,
                         channel=channel,
                         thread=thread,
-                        team=team,
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
@@ -406,7 +401,6 @@ class SlackListener(object):
                 context=SlackContext(
                     app=self.app,
                     channel=channel,
-                    team=team,
                     timestamp=event_ts,
                     bot_user_id=self.bot_user_id,
                 ),
@@ -417,7 +411,6 @@ class SlackListener(object):
                 context=SlackContext(
                     app=self.app,
                     channel=channel,
-                    team=team,
                     timestamp=event_ts,
                     bot_user_id=self.bot_user_id,
                 ),
@@ -437,7 +430,6 @@ class SlackListener(object):
             context=SlackContext(
                 app=self.app,
                 channel=channel,
-                team=team,
                 timestamp=event_ts,
                 bot_user_id=self.bot_user_id,
             ),

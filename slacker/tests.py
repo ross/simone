@@ -23,7 +23,6 @@ class TestSlackContext(TestCase):
         context = SlackContext(
             app=None,
             channel=public_channel,
-            team='T01GZF7DHKN',
             thread=None,
             timestamp='1633815504.005800',
             bot_user_id='U01V6PW6XDE',
@@ -39,7 +38,6 @@ class TestSlackContext(TestCase):
         context = SlackContext(
             app=None,
             channel=private_channel,
-            team='T01GZF7DHKN',
             thread=None,
             timestamp='1633816328.000200',
             bot_user_id='U01V6PW6XDE',
@@ -98,7 +96,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633815504.005800',
                 bot_user_id='U01V6PW6XDE',
@@ -143,7 +140,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread='1633815504.005800',
                 timestamp='1633815602.006000',
                 bot_user_id='U01V6PW6XDE',
@@ -171,7 +167,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team=None,
                 thread=None,
                 timestamp='1633888275.007000',
                 bot_user_id='U01V6PW6XDE',
@@ -212,7 +207,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=private_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633816328.000200',
                 bot_user_id='U01V6PW6XDE',
@@ -255,7 +249,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912633.008700',
                 bot_user_id='U01V6PW6XDE',
@@ -333,7 +326,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912640.008800',
                 bot_user_id='U01V6PW6XDE',
@@ -383,7 +375,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633981229.008900',
                 bot_user_id='U01V6PW6XDE',
@@ -467,7 +458,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633981255.009100',
                 bot_user_id='U01V6PW6XDE',
@@ -517,7 +507,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=ephemeral_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633815284.005500',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -559,7 +548,6 @@ class TestSlackListener(TestCase):
                 app=app,
                 # we should get back our recorded channel from above
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633814854.000100',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -598,7 +586,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=private_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633816538.000800',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -623,7 +610,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=private_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633816442.000100',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -657,7 +643,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633815843.006500',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -683,7 +668,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 timestamp='1633815668.006400',
                 bot_user_id='U01V6PW6XDE',
             ),
@@ -741,7 +725,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
                 bot_user_id='U01V6PW6XDE',
@@ -783,7 +766,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
                 bot_user_id='U01V6PW6XDE',
@@ -831,7 +813,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633990282.009400',
                 bot_user_id='U01V6PW6XDE',
@@ -882,7 +863,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912018.007600',
                 bot_user_id='U01V6PW6XDE',
@@ -956,7 +936,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912278.007800',
                 bot_user_id='U01V6PW6XDE',
@@ -1000,7 +979,6 @@ class TestSlackListener(TestCase):
             context=SlackContext(
                 app=app,
                 channel=public_channel,
-                team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912414.008200',
                 bot_user_id='U01V6PW6XDE',
