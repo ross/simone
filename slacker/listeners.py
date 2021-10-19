@@ -67,7 +67,7 @@ class SlackContext(BaseContext):
 
     def react(self, emoji):
         self.app.client.reactions_add(
-            channel=self.channel, name=emoji, timestamp=self.timestamp
+            channel=self.channel_id, name=emoji, timestamp=self.timestamp
         )
 
     def user_mention(self, user_id):

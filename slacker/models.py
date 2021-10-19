@@ -66,7 +66,6 @@ class Channel(models.Model):
 
     @property
     def channel_type_enum(self):
-        print(f'\n\n{type(self.channel_type)}\n\n')
         if isinstance(self.channel_type, ChannelType):
             return self.channel_type
         if self.channel_type == 'public':

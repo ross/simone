@@ -53,9 +53,11 @@ class Dispatcher(object):
 
         self.listeners = [SlackListener(self)]
 
-        messages = []
+        addeds = []
         commands = {}
+        joineds = []
         multi_word_commands = {}
+        messages = []
         for handler in handlers:
             config = handler.config()
             for command in config.get('commands', []):
@@ -63,10 +65,16 @@ class Dispatcher(object):
                     multi_word_commands[command] = handler
                 else:
                     commands[command] = handler
+            if config.get('added', False):
+                addeds.append(handler)
+            if config.get('joined', False):
+                joineds.append(handler)
             if config.get('messages', False):
                 messages.append(handler)
 
+        self.addeds = addeds
         self.commands = commands
+        self.joineds = joineds
         self.multi_word_commands = multi_word_commands
         self.messages = messages
 
@@ -74,8 +82,10 @@ class Dispatcher(object):
         return sum([l.urlpatterns() for l in self.listeners], [])
 
     @dispatch
-    def added(*args, **kwargs):
+    def added(self, *args, **kwargs):
         pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
+        for handler in self.addeds:
+            handler.added(*args, **kwargs)
 
     def _did_you_mean(self, context, command):
         # score commands for "distant" from the command we received
@@ -135,15 +145,17 @@ class Dispatcher(object):
             )
 
     @dispatch
-    def edit(*args, **kwargs):
+    def edit(self, *args, **kwargs):
         pprint({'type': 'edit', 'args': args, 'kwargs': kwargs})
 
     @dispatch
-    def joined(*args, **kwargs):
+    def joined(self, *args, **kwargs):
         pprint({'type': 'joined', 'args': args, 'kwargs': kwargs})
+        for handler in self.joineds:
+            handler.joined(*args, **kwargs)
 
     @dispatch
-    def left(*args, **kwargs):
+    def left(self, *args, **kwargs):
         pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
 
     @dispatch
@@ -153,5 +165,5 @@ class Dispatcher(object):
             handler.message(*args, **kwargs)
 
     @dispatch
-    def removed(*args, **kwargs):
+    def removed(self, *args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})
