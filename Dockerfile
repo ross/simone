@@ -7,4 +7,4 @@ COPY . .
 RUN find /app
 
 # TODO: migrate first, run in gunicorn
-CMD ./manage.py runserver 0.0.0.0:6444
+CMD gunicorn simone.wsgi --bind 0.0.0.0:6444 --graceful-timeout 5 --preload --workers 4
