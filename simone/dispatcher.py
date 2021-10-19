@@ -93,7 +93,6 @@ class Dispatcher(object):
 
     @dispatch
     def added(self, *args, **kwargs):
-        pprint({'type': 'added', 'args': args, 'kwargs': kwargs})
         for handler in self.addeds:
             handler.added(*args, **kwargs)
 
@@ -160,7 +159,6 @@ class Dispatcher(object):
 
     @dispatch
     def joined(self, *args, **kwargs):
-        pprint({'type': 'joined', 'args': args, 'kwargs': kwargs})
         for handler in self.joineds:
             handler.joined(*args, **kwargs)
 
@@ -170,7 +168,6 @@ class Dispatcher(object):
 
     @dispatch
     def message(self, *args, **kwargs):
-        pprint({'type': 'left', 'args': args, 'kwargs': kwargs})
         for handler in self.messages:
             handler.message(*args, **kwargs)
 
