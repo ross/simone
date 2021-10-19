@@ -37,10 +37,12 @@ def dispatch(func):
                     args,
                     kwargs,
                 )
-                context.say(
-                    'An error occured while responding to this message',
-                    reply=True,
-                )
+                # We only want to reply to errors on commands
+                if 'command' in kwargs:
+                    context.say(
+                        'An error occured while responding to this message',
+                        reply=True,
+                    )
         # We have to close the connection explicitly, if we don't things seem
         # to "hang" somewhere in transaction.atomic() in future jobs :-(
         # This isn't a problem in the dev server with sqlite3, but not clear if
