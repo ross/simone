@@ -51,18 +51,24 @@ class Channel(models.Model):
     }
     '''
 
+    class Type(models.TextChoices):
+        PUBLIC = 'public'
+        PRIVATE = 'private'
+        DIRECT = 'direct'
+
     id = models.CharField(max_length=16, primary_key=True)
     team_id = models.CharField(max_length=16)
     name = models.CharField(max_length=255)
-    channel_type = models.CharField(
-        max_length=7, choices=[(e, e.value) for e in ChannelType]
-    )
+    channel_type = models.CharField(max_length=7, choices=Type.choices)
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
     def channel_type_enum(self):
+        print(f'\n\n{type(self.channel_type)}\n\n')
+        if isinstance(self.channel_type, ChannelType):
+            return self.channel_type
         if self.channel_type == 'public':
             return ChannelType.PUBLIC
         elif self.channel_type == 'private':

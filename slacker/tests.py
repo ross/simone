@@ -12,6 +12,41 @@ class DummyApp(object):
         return lambda _: None
 
 
+class TestSlackContext(TestCase):
+    def test_channel_types(self):
+        public_channel = Channel.objects.create(
+            id='C01GTHYEU4B',
+            team_id='T01GZF7DHKN',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+        )
+        context = SlackContext(
+            app=None,
+            channel=public_channel,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633815504.005800',
+            bot_user_id='U01V6PW6XDE',
+        )
+        self.assertEquals(ChannelType.PUBLIC, context.channel_type)
+
+        private_channel = Channel.objects.create(
+            id='C01UTGR299A',
+            team_id='T01GZF7DHKN',
+            name='bot-dev-private',
+            channel_type=Channel.Type.PRIVATE,
+        )
+        context = SlackContext(
+            app=None,
+            channel=private_channel,
+            team='T01GZF7DHKN',
+            thread=None,
+            timestamp='1633816328.000200',
+            bot_user_id='U01V6PW6XDE',
+        )
+        self.assertEquals(ChannelType.PRIVATE, context.channel_type)
+
+
 class TestSlackListener(TestCase):
     def test_messages(self):
         app = DummyApp()
@@ -19,6 +54,19 @@ class TestSlackListener(TestCase):
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
+
+        public_channel = Channel.objects.create(
+            id='C01GTHYEU4B',
+            team_id='T01GZF7DHKN',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+        )
+        private_channel = Channel.objects.create(
+            id='C01UTGR299A',
+            team_id='T01GZF7DHKN',
+            name='bot-dev-private',
+            channel_type=Channel.Type.PRIVATE,
+        )
 
         # message from a user in a public channel
         message = {
@@ -49,8 +97,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633815504.005800',
@@ -95,8 +142,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread='1633815504.005800',
                 timestamp='1633815602.006000',
@@ -124,8 +170,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team=None,
                 thread=None,
                 timestamp='1633888275.007000',
@@ -166,8 +211,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01UTGR299A',
-                channel_type=ChannelType.PRIVATE,
+                channel=private_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633816328.000200',
@@ -210,8 +254,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912633.008700',
@@ -289,8 +332,7 @@ class TestSlackListener(TestCase):
         dispatcher.edit.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912640.008800',
@@ -340,8 +382,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633981229.008900',
@@ -425,8 +466,7 @@ class TestSlackListener(TestCase):
         dispatcher.edit.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633981255.009100',
@@ -449,6 +489,13 @@ class TestSlackListener(TestCase):
 
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
+        ephemeral_channel = Channel(
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            team_id='T01GZF7DHKN',
+        )
+
         # bot added to a public channel
         member_joined_channel = {
             'type': 'member_joined_channel',
@@ -461,7 +508,7 @@ class TestSlackListener(TestCase):
         }
         channel_info_mock.reset_mock()
         channel_info_mock.side_effect = [
-            {'id': 'C01GTHYEU4B', 'name': '#bot-dev', 'is_channel': True}
+            {'id': 'C01GTHYEU4B', 'name': 'bot-dev', 'is_channel': True}
         ]
         dispatcher.reset_mock()
         listener.member_joined_channel(member_joined_channel)
@@ -469,17 +516,18 @@ class TestSlackListener(TestCase):
         dispatcher.added.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=ephemeral_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633815284.005500',
                 bot_user_id='U01V6PW6XDE',
             ),
             inviter='U01GQ7UFKFX',
         )
-        ch = Channel.objects.get(id='C01GTHYEU4B')
-        self.assertEquals('#bot-dev', ch.name)
-        self.assertEquals(ChannelType.PUBLIC, ch.channel_type_enum)
+        public_channel = Channel.objects.get(id='C01GTHYEU4B')
+        self.assertEquals('T01GZF7DHKN', public_channel.team_id)
+        self.assertEquals('C01GTHYEU4B', public_channel.id)
+        self.assertEquals('bot-dev', public_channel.name)
+        self.assertEquals(Channel.Type.PUBLIC, public_channel.channel_type)
 
         # bot removed from public channel
         message = {
@@ -494,18 +542,35 @@ class TestSlackListener(TestCase):
             'channel_type': 'im',
         }
         channel_info_mock.reset_mock()
+        # the removed message will come from a DM
+        channel_info_mock.side_effect = [
+            {
+                'id': 'D01UDTE3E8M',
+                'user': 'USLACKBOT',
+                'is_channel': False,
+                'is_group': False,
+                'is_private': True,
+            }
+        ]
         dispatcher.reset_mock()
         listener.message(message)
         dispatcher.removed.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                # we should get back our recorded channel from above
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633814854.000100',
                 bot_user_id='U01V6PW6XDE',
             ),
             remover='U01GQ7UFKFX',
+        )
+
+        private_channel = Channel.objects.create(
+            id='C01UTGR299A',
+            team_id='T01GZF7DHKN',
+            name='bot-dev-private',
+            channel_type=Channel.Type.PRIVATE,
         )
 
         # bot is added to a private channel
@@ -522,7 +587,7 @@ class TestSlackListener(TestCase):
         channel_info_mock.side_effect = [
             {
                 'id': 'C01UTGR299A',
-                'name': '#bot-dev-private',
+                'name': 'bot-dev-private',
                 'is_channel': False,
                 'is_group': True,
             }
@@ -532,8 +597,7 @@ class TestSlackListener(TestCase):
         dispatcher.added.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01UTGR299A',
-                channel_type=ChannelType.PRIVATE,
+                channel=private_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633816538.000800',
                 bot_user_id='U01V6PW6XDE',
@@ -558,8 +622,7 @@ class TestSlackListener(TestCase):
         dispatcher.removed.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01UTGR299A',
-                channel_type=ChannelType.PRIVATE,
+                channel=private_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633816442.000100',
                 bot_user_id='U01V6PW6XDE',
@@ -593,8 +656,7 @@ class TestSlackListener(TestCase):
         dispatcher.joined.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633815843.006500',
                 bot_user_id='U01V6PW6XDE',
@@ -620,8 +682,7 @@ class TestSlackListener(TestCase):
         dispatcher.left.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 timestamp='1633815668.006400',
                 bot_user_id='U01V6PW6XDE',
@@ -637,6 +698,13 @@ class TestSlackListener(TestCase):
         dispatcher = MagicMock()
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
+
+        public_channel = Channel.objects.create(
+            id='C01GTHYEU4B',
+            team_id='T01GZF7DHKN',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+        )
 
         # message in public channel front-@ mentioning bot
         message = {
@@ -672,8 +740,7 @@ class TestSlackListener(TestCase):
         dispatcher.command.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
@@ -715,8 +782,7 @@ class TestSlackListener(TestCase):
         dispatcher.command.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633911893.007300',
@@ -764,8 +830,7 @@ class TestSlackListener(TestCase):
         dispatcher.command.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread='1633912633.008700',
                 timestamp='1633990282.009400',
@@ -816,8 +881,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912018.007600',
@@ -845,6 +909,13 @@ class TestSlackListener(TestCase):
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
+
+        public_channel = Channel.objects.create(
+            id='C01GTHYEU4B',
+            team_id='T01GZF7DHKN',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+        )
 
         # message with a link to a channel
         message = {
@@ -884,8 +955,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912278.007800',
@@ -929,8 +999,7 @@ class TestSlackListener(TestCase):
         dispatcher.message.assert_called_once_with(
             context=SlackContext(
                 app=app,
-                channel='C01GTHYEU4B',
-                channel_type=ChannelType.PUBLIC,
+                channel=public_channel,
                 team='T01GZF7DHKN',
                 thread=None,
                 timestamp='1633912414.008200',

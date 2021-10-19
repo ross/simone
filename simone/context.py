@@ -9,9 +9,17 @@ class ChannelType(Enum):
 
 class BaseContext(object):
     def __init__(
-        self, channel, channel_type, team, timestamp, bot_user_id, thread=None
+        self,
+        channel_id,
+        channel_name,
+        channel_type,
+        team,
+        timestamp,
+        bot_user_id,
+        thread=None,
     ):
-        self.channel = channel
+        self.channel_id = channel_id
+        self.channel_name = channel_name
         self.channel_type = channel_type
         self.team = team
         self.timestamp = timestamp

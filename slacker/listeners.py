@@ -25,15 +25,28 @@ class SlackException(Exception):
 class SlackContext(BaseContext):
     log = getLogger('SlackContext')
 
-    def __init__(self, app, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, app, *args, channel, **kwargs):
+        # TODO: we can get team from channel.team
+        if channel.channel_type == 'public':
+            channel_type = ChannelType.PUBLIC
+        elif channel.channel_type == 'private':
+            channel_type = ChannelType.PRIVATE
+        else:
+            channel_type = ChannelType.DIRECT
+        super().__init__(
+            *args,
+            channel_id=channel.id,
+            channel_name=channel.name,
+            channel_type=channel_type,
+            **kwargs,
+        )
         self.app = app
 
     def say(self, text, reply=False, to_user=False):
         self.log.debug('say: text=%s, reply=%s', text, reply)
         if to_user:
             self.app.client.chat_postEphemeral(
-                channel=self.channel,
+                channel=self.channel_id,
                 text=text,
                 thread_ts=self.thread,
                 user=to_user,
@@ -49,7 +62,7 @@ class SlackContext(BaseContext):
         else:
             thread = None
         self.app.client.chat_postMessage(
-            channel=self.channel, text=text, thread_ts=thread
+            channel=self.channel_id, text=text, thread_ts=thread
         )
 
     def react(self, emoji):
@@ -66,14 +79,14 @@ class SlackContext(BaseContext):
 
 class SlackListener(object):
     _RE_REMOVED_FROM = re.compile(
-        r'You have been removed from (?P<channel_name>#[\w\-]+) by <@(?P<user>\w+)>'
+        r'You have been removed from #(?P<channel_name>[\w\-]+) by <@(?P<user>\w+)>'
     )
     _CHANNEL_TYPES = {
-        'C': ChannelType.PUBLIC,
-        'G': ChannelType.PRIVATE,
-        'channel': ChannelType.PUBLIC,
-        'group': ChannelType.PRIVATE,
-        'im': ChannelType.DIRECT,
+        'C': Channel.Type.PUBLIC,
+        'G': Channel.Type.PRIVATE,
+        'channel': Channel.Type.PUBLIC,
+        'group': Channel.Type.PRIVATE,
+        'im': Channel.Type.DIRECT,
     }
 
     log = getLogger('SlackListener')
@@ -106,6 +119,10 @@ class SlackListener(object):
         @app.event("member_left_channel")
         def _wrapper_member_left(event, *args, **kwargs):
             self.member_left_channel(event)
+
+        @app.event("channel_rename")
+        def _wrapper_channel_rename(event, *args, **kwargs):
+            self.channel_rename(event)
 
         # TODO: emit data from auth_info to dispatcher on startup?
 
@@ -153,6 +170,41 @@ class SlackListener(object):
             self._bot_mention = f'<@{self.bot_user_id}>'
         return self._bot_mention
 
+    def _channel_info(self, channel_id):
+        resp = self.app.client.conversations_info(channel=channel_id)
+        return resp.data['channel']
+
+    def _get_or_create_channel(self, channel_id, team_id):
+        try:
+            # TODO: are channel_ids unique across teams? hopefully so
+            return Channel.objects.get(id=channel_id)
+        except Channel.DoesNotExist:
+            pass
+        channel = self._channel_info(channel_id)
+        if channel.get('is_private', False):
+            channel_type = Channel.Type.PRIVATE
+        elif channel.get('is_channel', False):
+            channel_type = Channel.Type.PUBLIC
+        else:
+            channel_type = Channel.Type.DIRECT
+        channel = Channel(
+            id=channel['id'],
+            team_id=team_id,
+            # im's don't have names, fall back to the user
+            name=channel.get('name', None) or channel.get('user', 'n/a'),
+            channel_type=channel_type.value,
+        )
+        # we can't record the channel info unless it has a valid team, this is
+        # working around api funkiness where some calls (bot messages) don't
+        # include `team` :-(
+        if team_id:
+            channel.save()
+        return channel
+
+    def channel_rename(self, event):
+        self.log.debug('channel_rename: event=%s', event)
+        # TODO: update/create channel
+
     def message(self, event):
         self.log.debug('message: event=%s', event)
 
@@ -170,192 +222,183 @@ class SlackListener(object):
             previous_text = None
             previous_timestamp = None
 
-        channel = event['channel']
-        channel_type = event['channel_type']
-        # TODO: should we always make sure the channel exists and map the type
-        # here rather than only doing it in the remove case to be more likely
-        # to have it recorded?
+        channel_id = event['channel']
+        slack_channel_type = event['channel_type']
 
-        text = message['text']
+        if slack_channel_type == 'channel_join':
+            # we're not interested in this one, we'll get it through
+            # member_joined_channel
+            self.log.debug('message:   not interested')
+            return
+        elif slack_channel_type not in ('channel', 'im', 'group'):
+            self.log.warn(
+                'message:   unexpected slack_channel_type=%s',
+                slack_channel_type,
+            )
+            return
+
+        # messages by other bots don't include a `team` :-(
         team = message.get('team', None)
+        channel = self._get_or_create_channel(channel_id, team)
+        text = message['text']
 
         thread = event.get('thread_ts', None)
         ts = event['ts']
 
-        if channel_type in ('channel', 'im', 'group'):
-            if 'user' in message:
-                sender = message['user']
-                sender_type = SenderType.USER
-            else:
-                sender = message['bot_id']
-                sender_type = SenderType.BOT
+        if 'user' in message:
+            sender = message['user']
+            sender_type = SenderType.USER
+        else:
+            sender = message['bot_id']
+            sender_type = SenderType.BOT
 
-            if sender == 'USLACKBOT':
-                # TODO: translations?
-                match = self._RE_REMOVED_FROM.match(text)
-                if match:
-                    # work around the lack of info in the removed message by
-                    # looking up our stored channel info
-                    name = match.group('channel_name')
-                    try:
-                        # TODO: what if the channel name changes
-                        channel = Channel.objects.get(team_id=team, name=name)
-                        channel_type = channel.channel_type_enum
-                        channel = channel.id
-                    except Channel.DoesNotExist:
-                        self.log.warn(
-                            'message: removed from an unknown channel, team=%s, name=%s',
-                            team,
-                            name,
-                        )
-                        channel = name
-                        channel_type = None
-
-                    user = match.group('user')
-                    self.log.info(
-                        'message:   the bot has been removed from %s by %s',
-                        channel,
-                        user,
+        if sender == 'USLACKBOT':
+            # TODO: translations?
+            match = self._RE_REMOVED_FROM.match(text)
+            if match:
+                channel_name = match.group('channel_name')
+                user = match.group('user')
+                self.log.info(
+                    'message:   the bot has been removed from %s by %s',
+                    channel_name,
+                    user,
+                )
+                try:
+                    removed_from = Channel.objects.get(
+                        team_id=team, name=channel_name
                     )
-                    self.dispatcher.removed(
-                        context=SlackContext(
-                            app=self.app,
-                            channel=channel,
-                            channel_type=channel_type,
-                            team=team,
-                            timestamp=ts,
-                            bot_user_id=self.bot_user_id,
-                        ),
-                        remover=user,
-                    )
-                else:
+                except Channel.DoesNotExist:
                     self.log.warn(
-                        'message:   ignoring other message from USLACKBOT, text=%s',
-                        text,
+                        'message: removed from channel (%s - %s) we do not recognize',
+                        team,
+                        channel_name,
                     )
-                return
-            channel_type = self._CHANNEL_TYPES[channel_type]
+                    return
+                self.dispatcher.removed(
+                    context=SlackContext(
+                        app=self.app,
+                        channel=removed_from,
+                        team=team,
+                        timestamp=ts,
+                        bot_user_id=self.bot_user_id,
+                    ),
+                    remover=user,
+                )
+            else:
+                self.log.warn(
+                    'message:   ignoring other message from USLACKBOT, text=%s',
+                    text,
+                )
+            return
 
-            bot_user_id = self.bot_user_id
-            try:
-                mentions = []
-                for i, block in enumerate(message['blocks']):
-                    for j, element in enumerate(block['elements']):
-                        for k, element in enumerate(element['elements']):
-                            if element['type'] == 'user':
-                                user_id = element['user_id']
-                                # ignore first mention of the bot_user_id,
-                                # it's starting a command
-                                if i + j + k != 0 or user_id != bot_user_id:
-                                    mentions.append(element['user_id'])
-            except KeyError:
-                mentions = []
+        bot_user_id = self.bot_user_id
+        try:
+            mentions = []
+            for i, block in enumerate(message['blocks']):
+                for j, element in enumerate(block['elements']):
+                    for k, element in enumerate(element['elements']):
+                        if element['type'] == 'user':
+                            user_id = element['user_id']
+                            # ignore first mention of the bot_user_id,
+                            # it's starting a command
+                            if i + j + k != 0 or user_id != bot_user_id:
+                                mentions.append(element['user_id'])
+        except KeyError:
+            mentions = []
 
-            if previous_text is not None:
-                # Note: we ignore any edited commands
-                self.dispatcher.edit(
+        if previous_text is not None:
+            # Note: we ignore any edited commands
+            self.dispatcher.edit(
+                context=SlackContext(
+                    app=self.app,
+                    channel=channel,
+                    thread=thread,
+                    team=team,
+                    timestamp=ts,
+                    bot_user_id=bot_user_id,
+                ),
+                text=text,
+                previous_text=previous_text,
+                sender=sender,
+                sender_type=sender_type,
+                previous_timestamp=previous_timestamp,
+                mentions=mentions,
+            )
+        else:
+            if text.startswith(self.bot_mention):
+                # TODO: this is way to messay, refactor, clean up and test
+                # independantly
+                text = text.replace(f'{self.bot_mention} ', '')
+                text = text.lstrip()
+                try:
+                    command, text = text.split(' ', 1)
+                except ValueError:
+                    command = text
+                    text = ''
+                text = text.lstrip()
+                self.dispatcher.command(
                     context=SlackContext(
                         app=self.app,
                         channel=channel,
-                        channel_type=channel_type,
+                        thread=thread,
+                        team=team,
+                        timestamp=ts,
+                        bot_user_id=bot_user_id,
+                    ),
+                    command=command,
+                    text=text,
+                    sender=sender,
+                    sender_type=sender_type,
+                    mentions=mentions,
+                )
+            elif (
+                text.startswith(self.dispatcher.LEADER)
+                and text[len(self.dispatcher.LEADER)] != ' '
+            ):
+                text = text[len(self.dispatcher.LEADER) :]
+                try:
+                    command, text = text.split(' ', 1)
+                except ValueError:
+                    command = text
+                    text = ''
+                text = text.lstrip()
+                self.dispatcher.command(
+                    context=SlackContext(
+                        app=self.app,
+                        channel=channel,
+                        thread=thread,
+                        team=team,
+                        timestamp=ts,
+                        bot_user_id=bot_user_id,
+                    ),
+                    command=command,
+                    text=text,
+                    sender=sender,
+                    sender_type=sender_type,
+                    mentions=mentions,
+                )
+            else:
+                self.dispatcher.message(
+                    context=SlackContext(
+                        app=self.app,
+                        channel=channel,
                         thread=thread,
                         team=team,
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
                     text=text,
-                    previous_text=previous_text,
                     sender=sender,
                     sender_type=sender_type,
-                    previous_timestamp=previous_timestamp,
                     mentions=mentions,
                 )
-            else:
-                if text.startswith(self.bot_mention):
-                    # TODO: this is way to messay, refactor, clean up and test
-                    # independantly
-                    text = text.replace(f'{self.bot_mention} ', '')
-                    text = text.lstrip()
-                    try:
-                        command, text = text.split(' ', 1)
-                    except ValueError:
-                        command = text
-                        text = ''
-                    text = text.lstrip()
-                    self.dispatcher.command(
-                        context=SlackContext(
-                            app=self.app,
-                            channel=channel,
-                            channel_type=channel_type,
-                            thread=thread,
-                            team=team,
-                            timestamp=ts,
-                            bot_user_id=bot_user_id,
-                        ),
-                        command=command,
-                        text=text,
-                        sender=sender,
-                        sender_type=sender_type,
-                        mentions=mentions,
-                    )
-                elif (
-                    text.startswith(self.dispatcher.LEADER)
-                    and text[len(self.dispatcher.LEADER)] != ' '
-                ):
-                    text = text[len(self.dispatcher.LEADER) :]
-                    try:
-                        command, text = text.split(' ', 1)
-                    except ValueError:
-                        command = text
-                        text = ''
-                    text = text.lstrip()
-                    self.dispatcher.command(
-                        context=SlackContext(
-                            app=self.app,
-                            channel=channel,
-                            channel_type=channel_type,
-                            thread=thread,
-                            team=team,
-                            timestamp=ts,
-                            bot_user_id=bot_user_id,
-                        ),
-                        command=command,
-                        text=text,
-                        sender=sender,
-                        sender_type=sender_type,
-                        mentions=mentions,
-                    )
-                else:
-                    self.dispatcher.message(
-                        context=SlackContext(
-                            app=self.app,
-                            channel=channel,
-                            channel_type=channel_type,
-                            thread=thread,
-                            team=team,
-                            timestamp=ts,
-                            bot_user_id=bot_user_id,
-                        ),
-                        text=text,
-                        sender=sender,
-                        sender_type=sender_type,
-                        mentions=mentions,
-                    )
-        elif channel_type == 'channel_join':
-            # we're not interested in this one, we'll get it through a direct
-            # subscription
-            self.log.debug('message:   not interested')
-        else:
-            self.log.warn('message:   unexpected channel_type=%s', channel_type)
 
     def member_joined_channel(self, event):
         self.log.debug('member_joined_channel: event=%s', event)
         inviter = event.get('inviter', None)
         channel = event['channel']
         team = event['team']
-        channel_type = self._get_or_create_channel(
-            channel, team
-        ).channel_type_enum
+        channel = self._get_or_create_channel(channel, team)
         joiner = event['user']
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
@@ -363,7 +406,6 @@ class SlackListener(object):
                 context=SlackContext(
                     app=self.app,
                     channel=channel,
-                    channel_type=channel_type,
                     team=team,
                     timestamp=event_ts,
                     bot_user_id=self.bot_user_id,
@@ -375,7 +417,6 @@ class SlackListener(object):
                 context=SlackContext(
                     app=self.app,
                     channel=channel,
-                    channel_type=channel_type,
                     team=team,
                     timestamp=event_ts,
                     bot_user_id=self.bot_user_id,
@@ -384,42 +425,18 @@ class SlackListener(object):
                 inviter=inviter,
             )
 
-    def _channel_info(self, channel_id):
-        resp = self.app.client.conversations_info(channel=channel_id)
-        return resp.data['channel']
-
-    def _get_or_create_channel(self, channel_id, team_id):
-        try:
-            return Channel.objects.get(id=channel_id)
-        except Channel.DoesNotExist:
-            pass
-        channel = self._channel_info(channel_id)
-        if channel['is_channel']:
-            channel_type = ChannelType.PUBLIC
-        elif channel['is_group']:
-            channel_type = ChannelType.PRIVATE
-        else:
-            channel_type = ChannelType.DIRECT
-        return Channel.objects.create(
-            id=channel['id'],
-            team_id=team_id,
-            name=channel['name'],
-            channel_type=channel_type.value,
-        )
-
     def member_left_channel(self, event):
         self.log.debug('member_left_channel: event=%s', event)
         kicker = event.get('inviter', None)
         channel = event['channel']
-        channel_type = self._CHANNEL_TYPES[event['channel_type']]
-        leaver = event['user']
         team = event['team']
+        channel = self._get_or_create_channel(channel, team)
+        leaver = event['user']
         event_ts = event['event_ts']
         self.dispatcher.left(
             context=SlackContext(
                 app=self.app,
                 channel=channel,
-                channel_type=channel_type,
                 team=team,
                 timestamp=event_ts,
                 bot_user_id=self.bot_user_id,
