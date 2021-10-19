@@ -201,6 +201,21 @@ class Joke(object):
 Registry.register_handler(Joke())
 
 
+class Ping(object):
+    '''
+    Ping...Pong
+    '''
+
+    def config(self):
+        return {'commands': ('ping',)}
+
+    def command(self, context, **kwargs):
+        context.say('pong')
+
+
+Registry.register_handler(Ping())
+
+
 class Wave(object):
     '''
     Adds a :wave: emoji to messages that say hi to the bot user.
