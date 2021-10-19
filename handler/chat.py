@@ -343,6 +343,9 @@ class Quote(object):
 
         url = f'{self.BASE_URL}/random'
         resp = session.get(url, params=params)
+        if resp.status_code == 404:
+            context.say(f'No quotes matched `{text}`')
+            return
         resp.raise_for_status()
         data = resp.json()
         context.say(f'{data["content"]} - {data["author"]}')
