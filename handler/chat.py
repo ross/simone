@@ -214,7 +214,7 @@ class Joke(object):
             categories = ', '.join(
                 sorted(
                     [
-                        c[0]
+                        f'`{c[0]}`'
                         for c in self.categories
                         if c[0] not in ('any', 'anything', 'something')
                     ]
