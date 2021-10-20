@@ -117,31 +117,33 @@ class Dispatcher(object):
         buf.write(command)
         buf.write('` is not a recognized command.')
 
+        # TODO: this isn't working right
         if potentials:
             buf.write(" Maybe you're looking for `")
 
             last = potentials.pop()
             n = len(potentials)
+
             if n > 1:
                 buf.write('`, `'.join(potentials))
                 buf.write('`, or `')
             elif n == 1:
                 buf.write(potentials[0])
                 buf.write('` or `')
-                buf.write(last)
-
-                buf.write('`.')
+            buf.write(last)
+            buf.write('`.')
 
             context.say(buf.getvalue())
 
     @dispatch
     def command(self, context, command, text, **kwargs):
+        # TODO: this should probably do the splitting/parsing
+        command = command.strip()
         handler = None
         try:
             # look for an exact match single word command
             handler = self.commands[command]
         except KeyError:
-            # TODO: this should probably do the splitting/parsing
             command = f'{command} {text}'
             for name, candidate in self.multi_word_commands.items():
                 if command.startswith(name):
