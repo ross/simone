@@ -136,16 +136,18 @@ class Dispatcher(object):
 
     @dispatch
     def command(self, context, command, text, **kwargs):
+        handler = None
         try:
             # look for an exact match single word command
             handler = self.commands[command]
         except KeyError:
             # TODO: this should probably do the splitting/parsing
             command = f'{command} {text}'
-            for name, handler in self.multi_word_commands.items():
+            for name, candidate in self.multi_word_commands.items():
                 if command.startswith(name):
                     text = command.split(name, 1)[1]
                     command = name
+                    handler = candidate
                     break
 
         if not handler:
