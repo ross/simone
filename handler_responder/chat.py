@@ -9,9 +9,9 @@ from .models import Response, Trigger
 
 class Responder(object):
     '''
-    Responds to trigger words with programmed responses
+    Responds to trigger words or phrases with programmed responses
 
-    Will watch for anyone to say trigger words and will pick a random response
+    Will watch for anyone to say triggers and will pick a random response
     from the linked responses when they do.
 
     To see all responses
@@ -38,43 +38,43 @@ class Responder(object):
     def command(self, context, text, mentions, sender, **kwargs):
         if ' do not respond ' in text:
             # removing a response
-            word, say = [t.strip() for t in text.split(' do not respond ', 1)]
+            phrase, say = [t.strip() for t in text.split(' do not respond ', 1)]
             try:
-                trigger = Trigger.objects.get(word=word.lower())
+                trigger = Trigger.objects.get(phrase=phrase.lower())
                 response = trigger.responses.get(say=say)
                 response.delete()
                 if trigger.responses.count() == 0:
                     trigger.delete()
                 context.say(
-                    f"OK. I won't respond with `{say}` to `{word}` anymore."
+                    f"OK. I won't respond with `{say}` to `{phrase}` anymore."
                 )
             except (Response.DoesNotExist, Trigger.DoesNotExist):
                 context.say(
-                    f"I wouldn't respond with `{say}` to `{word}` in the frist place."
+                    f"I wouldn't respond with `{say}` to `{phrase}` in the frist place."
                 )
             self._triggers = None
         elif ' respond ' in text:
             # adding a response
-            word, say = [t.strip() for t in text.split(' respond ', 1)]
-            trigger, _ = Trigger.objects.get_or_create(word=word.lower())
+            phrase, say = [t.strip() for t in text.split(' respond ', 1)]
+            trigger, _ = Trigger.objects.get_or_create(phrase=phrase.lower())
             try:
                 response = trigger.responses.get(say=say)
             except Response.DoesNotExist:
                 response = Response.objects.create(trigger=trigger, say=say)
             context.say(
-                f'Got it. When someone says `{word}` I might respond `{say}`.'
+                f'Got it. When someone says `{phrase}` I might respond `{say}`.'
             )
             self._triggers = None
         else:
             # list responses
-            word = text.strip()
+            phrase = text.strip()
             try:
-                trigger = Trigger.objects.get(word=word.lower())
+                trigger = Trigger.objects.get(phrase=phrase.lower())
                 responses = '\n--\n'.join(
                     [r.say for r in trigger.responses.all()]
                 )
                 context.say(
-                    f'When someone says `{word}` I might respond with ```{responses}```'
+                    f'When someone says `{phrase}` I might respond with ```{responses}```'
                 )
             except Trigger.DoesNotExist:
                 context.say(f"I don't have any responses for `{text}`")
@@ -82,7 +82,7 @@ class Responder(object):
     @property
     def triggers(self):
         if self._triggers is None:
-            self._triggers = {t.word: t.id for t in Trigger.objects.all()}
+            self._triggers = {t.phrase: t.id for t in Trigger.objects.all()}
 
         return self._triggers
 
