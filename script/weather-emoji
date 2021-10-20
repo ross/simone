@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -e
+
+OUT="tmp/weather-emoji"
+mkdir -p $OUT
+
+echo "Saving emoji to $OUT"
+
+for c in 01 02 03 04 09 10 11 13 50; do
+    echo "${c}d"
+    curl -sS "https://openweathermap.org/img/wn/${c}d@4x.png" > "${OUT}/weather-${c}d.png"
+    echo "${c}n"
+    curl -sS "https://openweathermap.org/img/wn/${c}n@4x.png" > "${OUT}/weather-${c}n.png"
+done
+
+echo "Done"

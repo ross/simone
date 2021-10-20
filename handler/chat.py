@@ -395,15 +395,23 @@ class Weather(object):
     def _weather_icon(self, data):
         try:
             weather = data['weather'][0]
-            icon = weather['icon']
-            desc = f'{weather["main"]} - {weather["description"]}'
-            return f'<https://openweathermap.org/img/wn/{icon}@2x.png|{desc}>'
+            # Unfortunately only paid workspaces allow bots to upload emoji so
+            # these have to be manually added. See script/weather-emoji
+            return f':weather-{weather["icon"]}: - {weather["description"]}'
         except (IndexError, KeyError):
             return ''
 
     def command(self, context, text, **kwargs):
-        # TODO: support C?
-        params = {'q': text, 'appid': self.app_id, 'units': 'imperial'}
+        n = len(text)
+        text = text.replace('in celsius', '')
+        # If it's shorter we found it and they want C
+        in_c = n != len(text)
+
+        params = {
+            'q': text,
+            'appid': self.app_id,
+            'units': 'celsius' if in_c else 'imperial',
+        }
         resp = session.get(self.URL, params=params)
         if resp.status_code == 404:
             # unknown location/city
@@ -416,8 +424,9 @@ class Weather(object):
         feels_like = main['feels_like']
         humidity = main['humidity']
         weather_icon = self._weather_icon(data)
+        unit = 'C' if in_c else 'F'
         context.say(
-            f'Current weather for `{text}`: {temp}F, feels like {feels_like}F. {humidity}% humidity. {weather_icon}'
+            f'Current weather for `{text}`: {temp}{unit}, feels like {feels_like}{unit}. {humidity}% humidity. {weather_icon}'
         )
 
 
