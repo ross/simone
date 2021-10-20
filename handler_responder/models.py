@@ -2,7 +2,7 @@ from django.db import models
 
 
 class Trigger(models.Model):
-    word = models.CharField(max_length=64, unique=True)
+    phrase = models.CharField(max_length=64, unique=True)
 
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
