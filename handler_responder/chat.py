@@ -37,7 +37,7 @@ class Responder(object):
             # removing a response
             word, say = [t.strip() for t in text.split(' do not respond ', 1)]
             try:
-                trigger = Trigger.objects.get(word=word)
+                trigger = Trigger.objects.get(word=word.lower())
                 response = trigger.responses.get(say=say)
                 response.delete()
                 if trigger.responses.count() == 0:
@@ -52,24 +52,24 @@ class Responder(object):
         elif ' respond ' in text:
             # adding a response
             word, say = [t.strip() for t in text.split(' respond ', 1)]
-            trigger, _ = Trigger.objects.get_or_create(word=word)
+            trigger, _ = Trigger.objects.get_or_create(word=word.lower())
             try:
                 response = trigger.responses.get(say=say)
             except Response.DoesNotExist:
                 response = Response.objects.create(trigger=trigger, say=say)
             context.say(
-                f'Got it. When someone says `{trigger.word}` I might respond `{response.say}`.'
+                f'Got it. When someone says `{word}` I might respond `{say}`.'
             )
         else:
             # list responses
-            text = text.strip()
+            word = text.strip()
             try:
-                trigger = Trigger.objects.get(word=text)
+                trigger = Trigger.objects.get(word=word.lower())
                 responses = '\n--\n'.join(
                     [r.say for r in trigger.responses.all()]
                 )
                 context.say(
-                    f'When someone says `{trigger.word}` I might respond with ```{responses}```'
+                    f'When someone says `{word}` I might respond with ```{responses}```'
                 )
             except Trigger.DoesNotExist:
                 context.say(f"I don't have any responses for `{text}`")
@@ -86,7 +86,7 @@ class Responder(object):
             # we've responded in this channel recently
             return
         triggers = self.triggers
-        tokens = text.split(' ')
+        tokens = text.lower().split(' ')
         # shuffle the tokens in case there are multiple triggers so that we'll
         # pick a "random" one
         shuffle(tokens)
