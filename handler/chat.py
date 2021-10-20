@@ -1,4 +1,5 @@
 from django.conf import settings
+from functools import partial
 from io import StringIO
 from os import environ
 from requests import Session
@@ -9,6 +10,8 @@ from simone.handlers import Registry
 
 session = Session()
 session.headers = {'user-agent': 'simone/0.0'}
+# shim an default timeout
+session.request = partial(session.request, timeout=5)
 
 
 class Echo(object):
