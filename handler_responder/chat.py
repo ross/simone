@@ -1,5 +1,6 @@
 from django.conf import settings
 from random import choice, shuffle
+from string import punctuation
 from time import time
 
 from simone.handlers import Registry, only_public
@@ -22,6 +23,8 @@ class Responder(object):
     to remove a response
       .when <trigger> do not respond <response>
     '''
+
+    PUNCT_TRANS = str.maketrans('', '', punctuation)
 
     def __init__(self, cooldown):
         self.cooldown = cooldown
@@ -86,7 +89,7 @@ class Responder(object):
             # we've responded in this channel recently
             return
         triggers = self.triggers
-        tokens = text.lower().split(' ')
+        tokens = text.translate(self.PUNCT_TRANS).lower().split(' ')
         # shuffle the tokens in case there are multiple triggers so that we'll
         # pick a "random" one
         shuffle(tokens)
