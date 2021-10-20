@@ -32,7 +32,7 @@ class Memory(object):
                 )[:25]
                 if items:
                     buf = StringIO()
-                    buf.write('You might be looking one of these for:\n```')
+                    buf.write('You might be looking for one of these:\n```')
                     for item in items:
                         buf.write('  ')
                         buf.write(item.key)
