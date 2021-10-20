@@ -52,6 +52,7 @@ class Responder(object):
                 context.say(
                     f"I wouldn't respond with `{say}` to `{word}` in the frist place."
                 )
+            self._triggers = None
         elif ' respond ' in text:
             # adding a response
             word, say = [t.strip() for t in text.split(' respond ', 1)]
@@ -63,6 +64,7 @@ class Responder(object):
             context.say(
                 f'Got it. When someone says `{word}` I might respond `{say}`.'
             )
+            self._triggers = None
         else:
             # list responses
             word = text.strip()
