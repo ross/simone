@@ -159,7 +159,6 @@ class Joke(object):
 
     To get a random punny joke
       .pun
-      .pun me
 
     To get a list of supported categories
       .joke categories
@@ -202,12 +201,15 @@ class Joke(object):
         if command == 'pun':
             return 'Pun'
 
+        if not text:
+            return 'Any'
+
         text = text.lower()
         for keyword, category in self.categories:
             if keyword in text:
                 return category
 
-        return 'Any'
+        return None
 
     def command(self, context, command, text, **kwargs):
         if 'categories' in text:
@@ -223,7 +225,11 @@ class Joke(object):
             context.say(f'I can tell you jokes about {categories}')
             return
 
-        url = f'{self.BASE_URL}/joke/{self.find_category(command, text)}?safe-mode'
+        category = self.find_category(command, text)
+        if category is None:
+            context.say("Sorry I don't know any jokes about that")
+            return
+        url = f'{self.BASE_URL}/joke/{category}?safe-mode'
         params = {'lang': 'en'}
         resp = session.get(url, params=params)
         resp.raise_for_status()
