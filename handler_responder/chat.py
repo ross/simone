@@ -1,10 +1,10 @@
 from django.conf import settings
 from random import choice, shuffle
-from string import punctuation
 from time import time
 
 from simone.handlers import Registry, only_public
 from .models import Response, Trigger
+from .util import tokenize
 
 
 class Responder(object):
@@ -24,8 +24,6 @@ class Responder(object):
       .when <trigger> do not respond <response>
     '''
 
-    PUNCT_TRANS = str.maketrans('', '', punctuation)
-
     def __init__(self, cooldown):
         self.cooldown = cooldown
         self._triggers = None
@@ -40,7 +38,7 @@ class Responder(object):
             # removing a response
             phrase, say = [t.strip() for t in text.split(' do not respond ', 1)]
             try:
-                trigger = Trigger.objects.get(phrase=phrase.lower())
+                trigger = Trigger.objects.get(phrase=phrase)
                 response = trigger.responses.get(say=say)
                 response.delete()
                 if trigger.responses.count() == 0:
@@ -55,8 +53,8 @@ class Responder(object):
             self._triggers = None
         elif ' respond ' in text:
             # adding a response
-            phrase, say = [t.strip() for t in text.split(' respond ', 1)]
-            trigger, _ = Trigger.objects.get_or_create(phrase=phrase.lower())
+            phrase, say = text.split(' respond ', 1)
+            trigger, _ = Trigger.objects.get_or_create(phrase=phrase)
             try:
                 response = trigger.responses.get(say=say)
             except Response.DoesNotExist:
@@ -69,7 +67,7 @@ class Responder(object):
             # list responses
             phrase = text.strip()
             try:
-                trigger = Trigger.objects.get(phrase=phrase.lower())
+                trigger = Trigger.objects.get(phrase=phrase)
                 responses = '\n--\n'.join(
                     [r.say for r in trigger.responses.all()]
                 )
@@ -82,7 +80,9 @@ class Responder(object):
     @property
     def triggers(self):
         if self._triggers is None:
-            self._triggers = {t.phrase: t.id for t in Trigger.objects.all()}
+            self._triggers = {
+                tokenize(t.phrase): t.id for t in Trigger.objects.all()
+            }
 
         return self._triggers
 
@@ -90,14 +90,14 @@ class Responder(object):
         if (time() - self._last.get(context.channel_id, 0)) <= self.cooldown:
             # we've responded in this channel recently
             return
-        triggers = self.triggers
-        tokens = text.translate(self.PUNCT_TRANS).lower().split(' ')
-        # shuffle the tokens in case there are multiple triggers so that we'll
+        tokens = tokenize(text)
+        # shuffle the triggers in case there are multiple matches so that we'll
         # pick a "random" one
-        shuffle(tokens)
-        for token in tokens:
-            if token in triggers:
-                trigger_id = triggers[token]
+        triggers = list(self.triggers.items())
+        shuffle(triggers)
+        for phrase, trigger_id in triggers:
+            # if the tokenized phrase appears in the tokenized text
+            if phrase in tokens:
                 # pick a random response
                 response = choice(
                     Response.objects.filter(trigger_id=trigger_id)
