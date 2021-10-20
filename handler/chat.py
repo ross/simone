@@ -187,9 +187,10 @@ class Joke(object):
                     for a in data['categoryAliases']
                 ]
                 + [
-                    ('tech', 'Programming'),
                     ('anything', 'Any'),
+                    ('coding', 'Programming'),
                     ('something', 'Any'),
+                    ('tech', 'Programming'),
                 ]
             )
 
