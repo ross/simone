@@ -3,7 +3,6 @@ from functools import partial
 from io import StringIO
 from os import environ
 from requests import Session
-from time import sleep
 
 from simone.handlers import Registry
 
@@ -40,24 +39,21 @@ class Greetings(object):
 
     def added(self, context, inviter, **kwargs):
         if context.channel_name in self.channel_names:
+            texts = []
             if inviter:
                 mention = context.user_mention(inviter)
-                context.say(f'Thanks for the invite {mention}! :wave: everyone')
+                texts.append(
+                    f'Thanks for the invite {mention}! :wave: everyone'
+                )
             else:
-                context.say(':wave: everyone!')
-            sleep(2)
+                texts.append(':wave: everyone!')
             me = context.user_mention(context.bot_user_id)
-            context.say(
-                f"I'm {me}. I can do a handful of things currently and I'm always learning to do more every day"
-            )
-            sleep(3)
-            context.say(
-                'You can type `.help` to get a list of commands and `.help <command>` to get more information about a specific command'
-            )
-            sleep(1.5)
-            context.say(
-                "If there's something you'd like me to be able to do you can file an issue, or better yet a PR, at https://github.com/ross/simone"
-            )
+            texts += [
+                f"I'm {me}. I can do a handful of things currently and I'm always learning to do more",
+                'You can type `.help` to get a list of commands and `.help <command>` to get more information about a specific command',
+                "If there's something you'd like me to be able to do you can file an issue, or better yet a PR, at https://github.com/ross/simone",
+            ]
+            context.converse(texts)
 
 
 channel_names = getattr(settings, 'GREETINGS_CHANNELS', ['greetings'])
@@ -235,9 +231,7 @@ class Joke(object):
         resp.raise_for_status()
         data = resp.json()
         if data['type'] == 'twopart':
-            context.say(data['setup'])
-            sleep(5)
-            context.say(data['delivery'])
+            context.converse((data['setup'], data['delivery']), (5,))
         else:
             context.say(data['joke'])
 

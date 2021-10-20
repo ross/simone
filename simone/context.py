@@ -1,4 +1,5 @@
 from enum import Enum
+from time import sleep
 
 
 class ChannelType(Enum):
@@ -26,7 +27,7 @@ class BaseContext(object):
         self.bot_user_id = bot_user_id
         self.thread = thread
 
-    def say(self, text, reply=False, to_user=False):
+    def say(self, text, reply=False, to_user=False, pauses=None):
         '''
         reply: Controls whether a new thread is started with the message
             - False: the text will be sent in the main channel unless it was
@@ -39,6 +40,18 @@ class BaseContext(object):
             - <user-id>: a private message only visible to the specified user.
         '''
         raise NotImplementedError('say is not implemented')
+
+    def converse(self, texts, pauses=None, **kwargs):
+        for i, text in enumerate(texts):
+            self.say(text, **kwargs)
+            try:
+                pause = pauses[i]
+            except (IndexError, TypeError):
+                # The average human can type 190 to 200 wpm, simone is above
+                # average and not human so let's say 225.
+                # 225 wpm / 60 s = 3.75 wsp
+                pause = len(text.split(' ')) / 3.75
+            sleep(pause)
 
     def react(self, emoji):
         '''
