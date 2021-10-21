@@ -81,18 +81,13 @@ class Help(object):
         return {'commands': ('help',)}
 
     def help_command(self, context, text, dispatcher):
-        try:
-            # try as-is
-            handler = dispatcher.commands[text]
-            # add the leader
-            text = f'{dispatcher.LEADER}{text}'
-        except KeyError:
-            try:
-                # try skipping the leader in case they did `.help .foo`
-                handler = dispatcher.commands[text[len(dispatcher.LEADER) :]]
-            except KeyError:
-                context.say(f'Sorry `{text}` is not a recognized command')
-        context.say(f'Help for `{text}`\n```{handler.__doc__}```')
+        if text.startswith(dispatcher.LEADER):
+            text = text[len(dispatcher.LEADER) :]
+        _, handler, _, _ = dispatcher.find_handler(text)
+        if handler:
+            context.say(f'Help for `{text}`\n```{handler.__doc__}```')
+        else:
+            context.say(f'Sorry `{text}` is not a recognized command')
 
     def _summarize_command(self, command, handler, dispatcher):
         try:
