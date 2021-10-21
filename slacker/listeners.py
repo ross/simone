@@ -318,16 +318,7 @@ class SlackListener(object):
             )
         else:
             if text.startswith(self.bot_mention):
-                # TODO: this is way to messay, refactor, clean up and test
-                # independantly
                 text = text.replace(f'{self.bot_mention} ', '')
-                text = text.lstrip()
-                try:
-                    command, text = text.split(' ', 1)
-                except ValueError:
-                    command = text
-                    text = ''
-                text = text.lstrip()
                 self.dispatcher.command(
                     context=SlackContext(
                         app=self.app,
@@ -336,7 +327,6 @@ class SlackListener(object):
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
-                    command=command,
                     text=text,
                     sender=sender,
                     sender_type=sender_type,
@@ -346,13 +336,7 @@ class SlackListener(object):
                 text.startswith(self.dispatcher.LEADER)
                 and text[len(self.dispatcher.LEADER)] != ' '
             ):
-                text = text[len(self.dispatcher.LEADER) :]
-                try:
-                    command, text = text.split(' ', 1)
-                except ValueError:
-                    command = text
-                    text = ''
-                text = text.lstrip()
+                text = text.replace(self.dispatcher.LEADER, '')
                 self.dispatcher.command(
                     context=SlackContext(
                         app=self.app,
@@ -361,7 +345,6 @@ class SlackListener(object):
                         timestamp=ts,
                         bot_user_id=bot_user_id,
                     ),
-                    command=command,
                     text=text,
                     sender=sender,
                     sender_type=sender_type,

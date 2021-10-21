@@ -67,16 +67,17 @@ class Dispatcher(object):
 
         addeds = []
         commands = {}
+        command_words = {}
+        command_max_words = 0
         joineds = []
-        multi_word_commands = {}
         messages = []
         for handler in handlers:
             config = handler.config()
             for command in config.get('commands', []):
-                if ' ' in command:
-                    multi_word_commands[command] = handler
-                else:
-                    commands[command] = handler
+                command = tuple(command.split())
+                commands[' '.join(command)] = handler
+                command_words[command] = handler
+                command_max_words = max(command_max_words, len(command))
             if config.get('added', False):
                 addeds.append(handler)
             if config.get('joined', False):
@@ -86,8 +87,9 @@ class Dispatcher(object):
 
         self.addeds = addeds
         self.commands = commands
+        self.command_words = command_words
+        self.command_max_words = command_max_words
         self.joineds = joineds
-        self.multi_word_commands = multi_word_commands
         self.messages = messages
 
     def urlpatterns(self):
@@ -98,19 +100,26 @@ class Dispatcher(object):
         for handler in self.addeds:
             handler.added(*args, **kwargs)
 
-    def _did_you_mean(self, context, command):
-        # score commands for "distant" from the command we received
-        commands = sorted(
-            [
+    def _did_you_mean(self, context, command_words):
+        # score commands for "distance" from the command we received
+        commands = []
+        for command in [' '.join(cw) for cw in command_words]:
+            commands += [
                 (levenshtein(command, name), name)
                 for name, _ in self.commands.items()
             ]
-        )
+        # order them by ascending score
+        commands.sort()
         # only include things that are close enough, within 50% matches
         cutoff = len(command) * 0.5
-        potentials = [
-            f'{self.LEADER}{name}' for score, name in commands if score < cutoff
-        ]
+        # as a set to get rid of duplicates
+        potentials = set(
+            [
+                f'{self.LEADER}{name}'
+                for score, name in commands
+                if score < cutoff
+            ]
+        )
         # build the response
         buf = StringIO()
         buf.write('Sorry `')
@@ -118,6 +127,8 @@ class Dispatcher(object):
         buf.write('` is not a recognized command.')
 
         if potentials:
+            # in alphabetical order
+            potentials = sorted(potentials)
             buf.write(" Maybe you're looking for `")
 
             last = potentials.pop()
@@ -134,29 +145,40 @@ class Dispatcher(object):
 
             context.say(buf.getvalue())
 
-    @dispatch
-    def command(self, context, command, text, **kwargs):
-        # TODO: this should probably do the splitting/parsing
-        command = command.strip()
-        handler = None
-        try:
-            # look for an exact match single word command
-            handler = self.commands[command]
-        except KeyError:
-            command = f'{command} {text}'
-            for name, candidate in self.multi_word_commands.items():
-                if command.startswith(name):
-                    text = command.split(name, 1)[1]
-                    command = name
-                    handler = candidate
-                    break
+    def find_handler(self, text):
+        # get rid of any leading and trailing space and generate our command
+        # words
+        pieces = text.strip().split()
+        command_words = [
+            tuple(pieces[0:i])
+            for i in range(min(len(pieces), self.command_max_words), 0, -1)
+        ]
+        # look for matching commands
+        for command_word in command_words:
+            try:
+                handler = self.command_words[command_word]
+                # we've found a match
+                command = ' '.join(command_word)
+                n = len(command_word)
+                text = ' '.join(pieces[n:])
+                return (command_words, handler, command, text)
+            except KeyError:
+                pass
 
-        if not handler:
-            self._did_you_mean(context, command)
-        else:
+        return (command_words, None, None, None)
+
+    @dispatch
+    def command(self, context, text, **kwargs):
+        '''
+        Note: this will clean up whitespace in the command & text
+        '''
+        command_words, handler, command, text = self.find_handler(text)
+        if handler:
             handler.command(
                 context, command=command, text=text, dispatcher=self, **kwargs
             )
+        else:
+            self._did_you_mean(context, command_words)
 
     @dispatch
     def edit(self, *args, **kwargs):
