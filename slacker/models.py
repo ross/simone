@@ -57,7 +57,6 @@ class Channel(models.Model):
         DIRECT = 'direct'
 
     id = models.CharField(max_length=16, primary_key=True)
-    team_id = models.CharField(max_length=16)
     name = models.CharField(max_length=255)
     channel_type = models.CharField(max_length=7, choices=Type.choices)
 
@@ -73,6 +72,3 @@ class Channel(models.Model):
         elif self.channel_type == 'private':
             return ChannelType.PRIVATE
         return ChannelType.DIRECT
-
-    class Meta:
-        unique_together = (('team_id', 'name'),)

@@ -117,7 +117,6 @@ class Dispatcher(object):
         buf.write(command)
         buf.write('` is not a recognized command.')
 
-        # TODO: this isn't working right
         if potentials:
             buf.write(" Maybe you're looking for `")
 

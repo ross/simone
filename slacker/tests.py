@@ -15,10 +15,7 @@ class DummyApp(object):
 class TestSlackContext(TestCase):
     def test_channel_types(self):
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B',
-            team_id='T01GZF7DHKN',
-            name='bot-dev',
-            channel_type=Channel.Type.PUBLIC,
+            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
         context = SlackContext(
             app=None,
@@ -31,7 +28,6 @@ class TestSlackContext(TestCase):
 
         private_channel = Channel.objects.create(
             id='C01UTGR299A',
-            team_id='T01GZF7DHKN',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
         )
@@ -54,14 +50,10 @@ class TestSlackListener(TestCase):
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B',
-            team_id='T01GZF7DHKN',
-            name='bot-dev',
-            channel_type=Channel.Type.PUBLIC,
+            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
         private_channel = Channel.objects.create(
             id='C01UTGR299A',
-            team_id='T01GZF7DHKN',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
         )
@@ -480,10 +472,7 @@ class TestSlackListener(TestCase):
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         ephemeral_channel = Channel(
-            id='C01GTHYEU4B',
-            name='bot-dev',
-            channel_type=Channel.Type.PUBLIC,
-            team_id='T01GZF7DHKN',
+            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
 
         # bot added to a public channel
@@ -513,7 +502,6 @@ class TestSlackListener(TestCase):
             inviter='U01GQ7UFKFX',
         )
         public_channel = Channel.objects.get(id='C01GTHYEU4B')
-        self.assertEquals('T01GZF7DHKN', public_channel.team_id)
         self.assertEquals('C01GTHYEU4B', public_channel.id)
         self.assertEquals('bot-dev', public_channel.name)
         self.assertEquals(Channel.Type.PUBLIC, public_channel.channel_type)
@@ -556,7 +544,6 @@ class TestSlackListener(TestCase):
 
         private_channel = Channel.objects.create(
             id='C01UTGR299A',
-            team_id='T01GZF7DHKN',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
         )
@@ -684,10 +671,7 @@ class TestSlackListener(TestCase):
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B',
-            team_id='T01GZF7DHKN',
-            name='bot-dev',
-            channel_type=Channel.Type.PUBLIC,
+            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
 
         # message in public channel front-@ mentioning bot
@@ -891,10 +875,7 @@ class TestSlackListener(TestCase):
         listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B',
-            team_id='T01GZF7DHKN',
-            name='bot-dev',
-            channel_type=Channel.Type.PUBLIC,
+            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
 
         # message with a link to a channel
@@ -988,3 +969,43 @@ class TestSlackListener(TestCase):
             sender_type=SenderType.USER,
             mentions=['U01JBS2C6E9'],
         )
+
+    def test_channel_rename(self):
+        listener = SlackListener(dispatcher=None, app=None)
+
+        # create a channel we've never seen before
+        event = {
+            'type': 'channel_rename',
+            'channel': {
+                'id': 'C02JNLHRQ3W',
+                'is_channel': True,
+                'is_mpim': False,
+                'name': 'bot-dev-rename-2',
+                'name_normalized': 'bot-dev-rename-2',
+                'created': 1634828436,
+            },
+            'event_ts': '1634828547.000900',
+        }
+        listener.channel_rename(event)
+        # check that it now exists
+        channel = Channel.objects.get(id='C02JNLHRQ3W')
+        # and has the expected name
+        self.assertEquals('bot-dev-rename-2', channel.name)
+
+        # Another rename of the same channel
+        event = {
+            'type': 'channel_rename',
+            'channel': {
+                'id': 'C02JNLHRQ3W',
+                'is_channel': True,
+                'is_mpim': False,
+                'name': 'bot-dev-rename',
+                'name_normalized': 'bot-dev-rename',
+                'created': 1634828436,
+            },
+            'event_ts': '1634828547.000900',
+        }
+        listener.channel_rename(event)
+        # reload our object and see if the name changed
+        channel.refresh_from_db()
+        self.assertEquals('bot-dev-rename', channel.name)
