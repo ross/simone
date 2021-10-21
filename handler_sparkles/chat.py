@@ -26,7 +26,7 @@ class Sparkles(object):
         if not mentions:
             mention = context.user_mention(sender)
             try:
-                user = User.objects.get(team_id=context.team, user_id=sender)
+                user = User.objects.get(user_id=sender)
                 context.say(
                     f'{mention} you have {user.sparkles} :sparkles: :tada:'
                 )
@@ -46,14 +46,12 @@ class Sparkles(object):
 
         for user_id in mentions:
             try:
-                user = User.objects.get(team_id=context.team, user_id=user_id)
+                user = User.objects.get(user_id=user_id)
                 # We're in a transation so no need to do an F() + 1
                 user.sparkles = user.sparkles + 1
                 user.save()
             except User.DoesNotExist:
-                user = User.objects.create(
-                    team_id=context.team, user_id=user_id, sparkles=1
-                )
+                user = User.objects.create(user_id=user_id, sparkles=1)
 
             buf.write(':tada: ')
             buf.write(context.user_mention(user_id))

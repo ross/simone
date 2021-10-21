@@ -34,7 +34,6 @@ class SlackContext(BaseContext):
             channel_type = ChannelType.DIRECT
         super().__init__(
             *args,
-            team=channel.team_id,
             channel_id=channel.id,
             channel_name=channel.name,
             channel_type=channel_type,
@@ -170,40 +169,40 @@ class SlackListener(object):
             self._bot_mention = f'<@{self.bot_user_id}>'
         return self._bot_mention
 
-    def _channel_info(self, channel_id):
-        resp = self.app.client.conversations_info(channel=channel_id)
-        return resp.data['channel']
-
-    def _get_or_create_channel(self, channel_id, team_id):
-        try:
-            # TODO: are channel_ids unique across teams? hopefully so
-            return Channel.objects.get(id=channel_id)
-        except Channel.DoesNotExist:
-            pass
-        channel = self._channel_info(channel_id)
+    def _channel_params(self, channel):
         if channel.get('is_private', False):
             channel_type = Channel.Type.PRIVATE
         elif channel.get('is_channel', False):
             channel_type = Channel.Type.PUBLIC
         else:
             channel_type = Channel.Type.DIRECT
-        channel = Channel(
-            id=channel['id'],
-            team_id=team_id,
+        return {
+            'id': channel['id'],
             # im's don't have names, fall back to the user
-            name=channel.get('name', None) or channel.get('user', 'n/a'),
-            channel_type=channel_type.value,
-        )
-        # we can't record the channel info unless it has a valid team, this is
-        # working around api funkiness where some calls (bot messages) don't
-        # include `team` :-(
-        if team_id:
-            channel.save()
-        return channel
+            'name': channel.get('name', None) or channel.get('user', 'n/a'),
+            'channel_type': channel_type.value,
+        }
+
+    def _channel_info(self, channel_id):
+        resp = self.app.client.conversations_info(channel=channel_id)
+        return resp.data['channel']
+
+    def _get_or_create_channel(self, channel_id):
+        try:
+            return Channel.objects.get(id=channel_id)
+        except Channel.DoesNotExist:
+            pass
+        channel = self._channel_info(channel_id)
+        params = self._channel_params(channel)
+        return Channel.objects.create(**params)
 
     def channel_rename(self, event):
         self.log.debug('channel_rename: event=%s', event)
-        # TODO: update/create channel
+        params = self._channel_params(event['channel'])
+        channel_id = params.pop('id')
+        channel, _ = Channel.objects.update_or_create(
+            id=channel_id, defaults=params
+        )
 
     def message(self, event):
         self.log.debug('message: event=%s', event)
@@ -237,9 +236,7 @@ class SlackListener(object):
             )
             return
 
-        # messages by other bots don't include a `team` :-(
-        team = message.get('team', None)
-        channel = self._get_or_create_channel(channel_id, team)
+        channel = self._get_or_create_channel(channel_id)
         text = message['text']
 
         thread = event.get('thread_ts', None)
@@ -264,13 +261,10 @@ class SlackListener(object):
                     user,
                 )
                 try:
-                    removed_from = Channel.objects.get(
-                        team_id=team, name=channel_name
-                    )
+                    removed_from = Channel.objects.get(name=channel_name)
                 except Channel.DoesNotExist:
                     self.log.warn(
-                        'message: removed from channel (%s - %s) we do not recognize',
-                        team,
+                        'message: removed from channel (%s) we do not recognize',
                         channel_name,
                     )
                     return
@@ -392,8 +386,7 @@ class SlackListener(object):
         self.log.debug('member_joined_channel: event=%s', event)
         inviter = event.get('inviter', None)
         channel = event['channel']
-        team = event['team']
-        channel = self._get_or_create_channel(channel, team)
+        channel = self._get_or_create_channel(channel)
         joiner = event['user']
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
@@ -422,8 +415,7 @@ class SlackListener(object):
         self.log.debug('member_left_channel: event=%s', event)
         kicker = event.get('inviter', None)
         channel = event['channel']
-        team = event['team']
-        channel = self._get_or_create_channel(channel, team)
+        channel = self._get_or_create_channel(channel)
         leaver = event['user']
         event_ts = event['event_ts']
         self.dispatcher.left(

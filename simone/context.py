@@ -14,7 +14,6 @@ class BaseContext(object):
         channel_id,
         channel_name,
         channel_type,
-        team,
         timestamp,
         bot_user_id,
         thread=None,
@@ -22,7 +21,6 @@ class BaseContext(object):
         self.channel_id = channel_id
         self.channel_name = channel_name
         self.channel_type = channel_type
-        self.team = team
         self.timestamp = timestamp
         self.bot_user_id = bot_user_id
         self.thread = thread
