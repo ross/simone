@@ -9,3 +9,16 @@ from .ping import Ping
 from .quote import Quote
 from .wave import Wave
 from .weather import Weather
+
+
+# Quell warnings
+Registry
+session
+Echo
+Greetings
+Help
+Joke
+Ping
+Quote
+Wave
+Weather
