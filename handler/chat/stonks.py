@@ -36,7 +36,17 @@ def round_to_cents(value):
 
 # TODO: explore https://finnhub.io/register
 class Stonks(object):
-    ''' '''
+    '''
+    Stonk quotes
+
+    To get stonk quotes:
+      .stonks tsla
+      .stonks btc
+
+    To get stock quotes:
+      .stocks tsla
+      .stocks btc
+    '''
 
     WSJ_URL = 'https://api.wsj.net/api/dylan/quotes/v2/comp/quoteByDialect'
     WSJ_NAMESPACES = (
