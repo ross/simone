@@ -1,5 +1,7 @@
 from django.utils.module_loading import autodiscover_modules
 from functools import partial, wraps
+from logging import getLogger
+
 from requests import Session
 
 from .context import ChannelType
@@ -54,6 +56,8 @@ exclude_private = exclude_channel_types
 
 
 class _Registry(object):
+    log = getLogger('Registry')
+
     handlers = []
 
     @classmethod
@@ -62,6 +66,7 @@ class _Registry(object):
 
     @classmethod
     def register_handler(cls, handler):
+        cls.log.info('register_handler: handler=%s', handler)
         cls.handlers.append(handler)
 
 
