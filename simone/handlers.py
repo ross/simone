@@ -1,5 +1,6 @@
 from django.utils.module_loading import autodiscover_modules
-from functools import wraps
+from functools import partial, wraps
+from requests import Session
 
 from .context import ChannelType
 
@@ -65,3 +66,10 @@ class _Registry(object):
 
 
 Registry = _Registry()
+
+# A shared requests session that can be used by all handlers to get best
+# practices w/o having to deal with the details
+session = Session()
+session.headers = {'user-agent': 'simone/0.0'}
+# shim an default timeout
+session.request = partial(session.request, timeout=5)
