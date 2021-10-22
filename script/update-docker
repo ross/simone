@@ -9,4 +9,16 @@ docker stop simone-old || true
 
 . .env
 
-docker run -d --restart=unless-stopped --name simone -e ENV=prod -e DJANGO_SECRET_KEY -e OPEN_WEATHER_MAP_APP_ID -e SLACK_BOT_TOKEN -e SLACK_SIGNING_SECRET -e SIMONE_DB_NAME -e SIMONE_DB_USER -e SIMONE_DB_PASSWORD -e SIMONE_DB_HOST -p 6444:6444 simone:latest
+docker run -d --restart=unless-stopped --name simone -e ENV=prod -p 6444:6444
+    -e DJANGO_SECRET_KEY \
+    -e IEX_API_TOKEN \
+    -e OPEN_WEATHER_MAP_APP_ID \
+    -e SIMONE_DB_HOST \
+    -e SIMONE_DB_NAME \
+    -e SIMONE_DB_PASSWORD \
+    -e SIMONE_DB_USER \
+    -e SLACK_BOT_TOKEN \
+    -e SLACK_SIGNING_SECRET \
+    -e WSJ_QUOTES_CKEY \
+    -e WSJ_QUOTES_ENTITLEMENT_TOKEN \
+    simone:latest
