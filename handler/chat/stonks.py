@@ -174,9 +174,17 @@ class Stonks(object):
         )
 
     def command(self, context, command, text, **kwargs):
-        open_value, last_value, change = self.lookup_iex(text)
-        if open_value is None:
+        text = text.upper()
+        if text in self.WSJ_ALIASES:
+            # special case go straight to WSJ
+            self.log.debug('command: wsj specific')
             open_value, last_value, change = self.lookup_wsj(text)
+        else:
+            self.log.debug('command: trying iex')
+            open_value, last_value, change = self.lookup_iex(text)
+            if open_value is None:
+                self.log.debug('command: no luck w/iex, trying wsj')
+                open_value, last_value, change = self.lookup_wsj(text)
 
         change_pct = round(100 * (change / open_value), 2)
 

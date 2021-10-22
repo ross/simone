@@ -39,6 +39,10 @@ LOGGING = {
         'django.db.backends': {
             # comment out to see db queries
             'level': 'INFO'
-        }
+        },
+        'slack_bolt': {
+            # super noisy
+            'level': 'INFO'
+        },
     },
 }
