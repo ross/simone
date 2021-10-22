@@ -9,7 +9,7 @@ docker stop simone-old || true
 
 . .env
 
-docker run -d --restart=unless-stopped --name simone -e ENV=prod -p 6444:6444
+docker run -d --restart=unless-stopped --name simone -e ENV=prod -p 6444:6444 \
     -e DJANGO_SECRET_KEY \
     -e IEX_API_TOKEN \
     -e OPEN_WEATHER_MAP_APP_ID \
