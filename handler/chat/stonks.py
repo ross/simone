@@ -1,3 +1,4 @@
+from logging import getLogger
 from os import environ
 
 from simone.handlers import Registry, session
@@ -47,6 +48,8 @@ class Stonks(object):
       .stocks tsla
       .stocks btc
     '''
+
+    log = getLogger('Stonks')
 
     WSJ_URL = 'https://api.wsj.net/api/dylan/quotes/v2/comp/quoteByDialect'
     WSJ_NAMESPACES = (
@@ -107,7 +110,7 @@ class Stonks(object):
             id_param = self.WSJ_ALIASES[text]
             self.log.debug('alias id_param=%s', id_param)
         except KeyError:
-            namespaced = [f'{tok}/{text}' for tok in self.NAMESPACES]
+            namespaced = [f'{tok}/{text}' for tok in self.WSJ_NAMESPACES]
             id_param = ','.join(namespaced)
             self.log.debug('namespaced id_param=%s', id_param)
 
