@@ -14,6 +14,7 @@ DATABASES = {
     }
 }
 
+_LEVEL = environ.get('DJANGO_LOGGING_LEVEL', 'INFO')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -26,10 +27,10 @@ LOGGING = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'level': 'INFO',
+            'level': _LEVEL,
             'formatter': 'simple',
         }
     },
-    'root': {'level': 'INFO', 'handlers': ('console',)},
+    'root': {'level': _LEVEL, 'handlers': ('console',)},
     'loggers': {'django.db.backends': {'level': 'INFO'}},
 }

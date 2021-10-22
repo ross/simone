@@ -84,6 +84,7 @@ class Dispatcher(object):
                 joineds.append(handler)
             if config.get('messages', False):
                 messages.append(handler)
+        self.log.debug('__init__: command_words=%s', command_words)
 
         self.addeds = addeds
         self.commands = commands
@@ -153,6 +154,7 @@ class Dispatcher(object):
             tuple(pieces[0:i])
             for i in range(min(len(pieces), self.command_max_words), 0, -1)
         ]
+        self.log.debug('find_handler: command_words=%s', command_words)
         # look for matching commands
         for command_word in command_words:
             try:

@@ -2,6 +2,12 @@
 
 set -e
 
+if [ -n $1 ]; then
+    PORT=$1
+else
+    PORT=6444
+fi
+
 docker build -t simone:latest .
 docker rm simone-old || true
 docker rename simone simone-old || true
@@ -9,4 +15,17 @@ docker stop simone-old || true
 
 . .env
 
-docker run -d --restart=unless-stopped --name simone -e ENV=prod -e DJANGO_SECRET_KEY -e OPEN_WEATHER_MAP_APP_ID -e SLACK_BOT_TOKEN -e SLACK_SIGNING_SECRET -e SIMONE_DB_NAME -e SIMONE_DB_USER -e SIMONE_DB_PASSWORD -e SIMONE_DB_HOST -p 6444:6444 simone:latest
+docker run -d --restart=unless-stopped --name simone -p 6444:6444 \
+    -e ENV=prod \
+    -e DJANGO_ALLOWED_HOSTS \
+    -e DJANGO_LOGGING_LEVEL \
+    -e DJANGO_SECRET_KEY \
+    -e OPEN_WEATHER_MAP_APP_ID \
+    -e OPEN_WEATHER_MAP_APP_ID \
+    -e SIMONE_DB_HOST \
+    -e SIMONE_DB_NAME \
+    -e SIMONE_DB_PASSWORD \
+    -e SIMONE_DB_USER \
+    -e SLACK_BOT_TOKEN \
+    -e SLACK_SIGNING_SECRET \
+    simone:latest

@@ -1,10 +1,16 @@
 # Everything by default
 *
 # Explicitly include the bits we want
-!handler/**/*.py
-!handler_memory/**/*.py
-!handler_responder/**/*.py
-!handler_sparkles/**/*.py
+# TODO: find a good way to keep this in sync
+!handler/*.py
+!handler/chat/*.py
+!handler/migrations/*.py
+!handler_memory/*.py
+!handler_memory/migrations/*.py
+!handler_responder/*.py
+!handler_responder/migrations/*.py
+!handler_sparkles/*.py
+!handler_sparkles/migrations/*.py
 !manage.py
 !requirements.txt
 !simone/*.py
