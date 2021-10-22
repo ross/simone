@@ -15,7 +15,7 @@ docker stop simone-old || true
 
 . .env
 
-docker run -d --restart=unless-stopped --name simone -p 6444:6444 \
+docker run -d --restart=unless-stopped --name simone -p $PORT:6444 \
     -e ENV=prod \
     -e DJANGO_ALLOWED_HOSTS \
     -e DJANGO_LOGGING_LEVEL \
