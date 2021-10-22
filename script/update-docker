@@ -2,8 +2,8 @@
 
 set -e
 
-if [ -n $1 ]; then
-    PORT=$1
+if [ -n "$1" ]; then
+    PORT="$1"
 else
     PORT=6444
 fi
@@ -15,12 +15,12 @@ docker stop simone-old || true
 
 . .env
 
-docker run -d --restart=unless-stopped --name simone -p 6444:6444 \
+docker run -d --restart=unless-stopped --name simone -p $PORT:6444 \
     -e ENV=prod \
     -e DJANGO_ALLOWED_HOSTS \
     -e DJANGO_LOGGING_LEVEL \
     -e DJANGO_SECRET_KEY \
-    -e OPEN_WEATHER_MAP_APP_ID \
+    -e IEX_API_TOKEN \
     -e OPEN_WEATHER_MAP_APP_ID \
     -e SIMONE_DB_HOST \
     -e SIMONE_DB_NAME \
@@ -28,4 +28,6 @@ docker run -d --restart=unless-stopped --name simone -p 6444:6444 \
     -e SIMONE_DB_USER \
     -e SLACK_BOT_TOKEN \
     -e SLACK_SIGNING_SECRET \
+    -e WSJ_QUOTES_CKEY \
+    -e WSJ_QUOTES_ENTITLEMENT_TOKEN \
     simone:latest

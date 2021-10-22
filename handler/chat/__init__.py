@@ -7,5 +7,20 @@ from .help import Help
 from .joke import Joke
 from .ping import Ping
 from .quote import Quote
+from .stonks import Stonks
 from .wave import Wave
 from .weather import Weather
+
+
+# Quell warnings
+Registry
+session
+Echo
+Greetings
+Help
+Joke
+Ping
+Quote
+Stonks
+Wave
+Weather
