@@ -4,7 +4,7 @@ set -e
 
 SOURCES="*.py */*.py */*/*.py"
 
-source env/bin/activate
+. env/bin/activate
 
 pycodestyle --ignore=E203,E501,E741,W503 $SOURCES
 # we have some intentional `from blah import *`s in __init__.py and pyflakes
