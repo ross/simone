@@ -15,8 +15,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           architecture: x64
       - name: Bootstrap
-        run: |
-          ./script/bootstrap
+        run: ./script/bootstrap
       - name: Lint, check formatting, & run tests
-        run: |
-          ./git_hooks_pre-commit
+        run: ./.git_hooks_pre-commit
