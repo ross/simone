@@ -1,4 +1,5 @@
 from os import environ
+from sys import argv
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -95,7 +96,11 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 env = environ.get('ENV', 'dev').lower()
-if env == 'prod':
+if len(argv) > 1 and argv[1] == 'test':
+    from .test import *
+
+    TEST_RUNNER = 'simone.test.SimoneRunner'
+elif env == 'prod':
     from .prod import *
 else:
     from .dev import *
