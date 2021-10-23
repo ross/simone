@@ -99,9 +99,10 @@ class Responder(object):
             # if the tokenized phrase appears in the tokenized text
             if phrase in tokens:
                 # pick a random response
-                response = choice(
-                    Response.objects.filter(trigger_id=trigger_id)
-                )
+                responses = list(Response.objects.filter(trigger_id=trigger_id))
+                if not responses:
+                    continue
+                response = choice(responses)
                 context.say(response.say)
                 self._last[context.channel_id] = time()
                 break
