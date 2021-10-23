@@ -4,4 +4,6 @@ set -e
 
 SOURCES="*.py */*.py */*/*.py"
 
+. env/bin/activate
+
 black --line-length=80 --skip-string-normalization --skip-magic-trailing-comma "$@" $SOURCES
