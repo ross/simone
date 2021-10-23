@@ -5,7 +5,7 @@ display_information:
   name: simone
 features:
   bot_user:
-    display_name: Simone
+    display_name: simone
     always_online: true
 oauth_config:
   scopes:
