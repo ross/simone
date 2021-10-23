@@ -4,4 +4,4 @@ set -e
 
 SOURCES="*.py */*.py */*/*.py"
 
-black --line-length=80 --skip-string-normalization --skip-magic-trailing-comma $SOURCES
+black --line-length=80 --skip-string-normalization --skip-magic-trailing-comma "$@" $SOURCES
