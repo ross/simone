@@ -29,7 +29,7 @@ class Sparkles(object):
         if command == 'sparkly':
             buf = StringIO()
             buf.write('Sparkly people:\n')
-            for user in User.objects.order_by('-sparkles')[10:]:
+            for user in User.objects.order_by('-sparkles')[:10]:
                 buf.write('* ')
                 buf.write(f'{user.sparkles:4d}')
                 buf.write(' - ')
