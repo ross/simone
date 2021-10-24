@@ -2,6 +2,8 @@ from os import environ
 
 DEBUG = False
 
+STATIC_ROOT = './static'
+
 DATABASES = {
     'default': {
         'ENGINE': 'mysql.connector.django',
