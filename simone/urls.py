@@ -7,4 +7,4 @@ from .handlers import Registry
 Registry.autoload()
 dispatcher = Dispatcher(Registry.handlers)
 
-urlpatterns = dispatcher.urlpatterns() + [path('admin/', admin.site.urls)]
+urlpatterns = dispatcher.urlpatterns() + [path('adm/', admin.site.urls)]
