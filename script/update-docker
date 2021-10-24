@@ -11,7 +11,7 @@ fi
 if [ -n "$2" ]; then
     STATIC="$2"
 else
-    STATIC="/var/www/simone"
+    STATIC="/var/www/simone/static"
 fi
 
 docker build -t simone:latest .
