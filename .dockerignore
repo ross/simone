@@ -13,6 +13,7 @@
 !handler_sparkles/migrations/*.py
 !manage.py
 !requirements.txt
+!script/run
 !simone/*.py
 !simone/settings/*.py
 !slacker/**/*.py

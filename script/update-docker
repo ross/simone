@@ -8,6 +8,12 @@ else
     PORT=6444
 fi
 
+if [ -n "$2" ]; then
+    STATIC="$2"
+else
+    STATIC="/var/www/simone/static"
+fi
+
 docker build -t simone:latest .
 docker rm simone-old || true
 docker rename simone simone-old || true
@@ -15,7 +21,10 @@ docker stop simone-old || true
 
 . .env
 
+mkdir -p "$STATIC"
+
 docker run -d --restart=unless-stopped --name simone -p $PORT:6444 \
+    -v $STATIC:/app/static \
     -e ENV=prod \
     -e DJANGO_ALLOWED_HOSTS \
     -e DJANGO_LOGGING_LEVEL \
