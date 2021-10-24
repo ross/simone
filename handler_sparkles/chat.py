@@ -16,13 +16,28 @@ class Sparkles(object):
 
       To see your current sparkle count:
         .sparkles
+
+      To see the most sparkly people
+        .sparkly
     '''
 
     def config(self):
-        return {'commands': ('sparkle', 'sparkles')}
+        return {'commands': ('sparkle', 'sparkles', 'sparkly')}
 
     @exclude_private
-    def command(self, context, text, mentions, sender, **kwargs):
+    def command(self, context, command, text, mentions, sender, **kwargs):
+        if command == 'sparkly':
+            buf = StringIO()
+            buf.write('Sparkly people:\n')
+            for user in User.objects.order_by('-sparkles')[:10]:
+                buf.write('* ')
+                buf.write(f'{user.sparkles:4d}')
+                buf.write(' - ')
+                buf.write(context.user_mention(user.user_id))
+                buf.write('\n')
+            context.say(buf.getvalue())
+            return
+
         if not mentions:
             mention = context.user_mention(sender)
             try:
