@@ -28,13 +28,21 @@ class SimoneTestResult(TextTestResult):
         self._root_logger.handlers = self._original_handlers
         return super().startTest(test)
 
-    # i don't like overriding a _ method, but otherwise we'd have to
-    # reimplement ~3 add* methods which seems more likely to be flakey
-    def _restoreStdout(self):
-        self._mirrorOutput = False
-        super()._restoreStdout()
+    # i don't like overriding a _ property, but otherwise we'd have to
+    # reimplement ~3 add* methods, one of which is non-trivial, which seems
+    # more likely to be flakey. Essentially we don't want ot mirror the output
+    # during the test runs when _restoreStdout is called so this effectively
+    # disables the property that gets set to cause that to happen.
+    @property
+    def _mirrorOutput(self):
+        return False
 
-    # same here :-(
+    @_mirrorOutput.setter
+    def _mirrorOutput(self, val):
+        pass
+
+    # same here :-(. This is so that we can include any logging for the failed
+    # tests.
     def _exc_info_to_string(self, err, test):
         return (
             super()._exc_info_to_string(err, test)
