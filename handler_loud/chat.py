@@ -2,7 +2,7 @@ from logging import getLogger
 from random import randrange
 import re
 
-from simone.handlers import Registry
+from simone.handlers import Registry, exclude_private
 from .models import Shout
 
 
@@ -10,14 +10,34 @@ from .models import Shout
 class Loud(object):
     '''
     Learns and repeats LOUD MESSAGES!
+
+    To add new LOUDs
+      SAY SOMETHING F*@CK!N% LOUDLY
+
+    To remove a LOUD
+      .loud forget SOMETHING LOUD
     '''
 
     log = getLogger('Loud')
     regex = re.compile(r'^\s*(?P<loud>[A-Z"][A-Z0-9 .,\'"()\?!&%$#@+-]+)$')
 
     def config(self):
-        return {'messages': True}
+        return {'commands': ('loud',), 'messages': True}
 
+    def command(self, context, text, **kwargs):
+        if text.startswith('forget '):
+            text = text.replace('forget ', '', 1).upper()
+            try:
+                shout = Shout.objects.get(text=text)
+                shout.delete()
+                context.say(f"OK. I've removed `{text}` from the list.")
+            except Shout.DoesNotExist:
+                context.say(f"`{text}` doesn't appear in my list to begin with")
+            return
+
+        context.say(f'Unrecognized sub-command `{text}`')
+
+    @exclude_private
     def message(self, context, text, **kwargs):
         match = self.regex.match(text)
         if match:
