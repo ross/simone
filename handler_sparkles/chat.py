@@ -30,7 +30,6 @@ class Sparkles(object):
             buf = StringIO()
             buf.write('Sparkly people:\n')
             for user in User.objects.order_by('-sparkles')[:10]:
-                buf.write('* ')
                 buf.write(f'{user.sparkles:4d}')
                 buf.write(' - ')
                 buf.write(context.user_mention(user.user_id))
