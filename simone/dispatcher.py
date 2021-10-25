@@ -189,7 +189,7 @@ class Dispatcher(object):
     @dispatch
     def joined(self, *args, **kwargs):
         for handler in self.joineds:
-            handler.joined(*args, **kwargs)
+            handler.joined(*args, dispatcher=self, **kwargs)
 
     @dispatch
     def left(self, *args, **kwargs):
@@ -198,7 +198,7 @@ class Dispatcher(object):
     @dispatch
     def message(self, *args, **kwargs):
         for handler in self.messages:
-            handler.message(*args, **kwargs)
+            handler.message(*args, dispatcher=self, **kwargs)
 
     @dispatch
     def removed(self, *args, **kwargs):

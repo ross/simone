@@ -10,15 +10,16 @@ from .context import ChannelType
 def only_channel_types(_func=None, channel_types={ChannelType.PUBLIC}):
     def decorate(func):
         @wraps(func)
-        def wrap(self, context, command, dispatcher, **kwargs):
+        def wrap(self, context, dispatcher, **kwargs):
             if context.channel_type not in channel_types:
-                context.say(
-                    f'Sorry, `{dispatcher.LEADER}{command}` cannot be run here'
-                )
+                # We only say something for commands, others will just be noops
+                command = kwargs.get('command', None)
+                if command is not None:
+                    context.say(
+                        f'Sorry, `{dispatcher.LEADER}{command}` cannot be run here'
+                    )
                 return
-            return func(
-                self, context, command=command, dispatcher=dispatcher, **kwargs
-            )
+            return func(self, context, dispatcher=dispatcher, **kwargs)
 
         return wrap
 
@@ -34,15 +35,16 @@ only_public = only_channel_types
 def exclude_channel_types(_func=None, channel_types={ChannelType.DIRECT}):
     def decorate(func):
         @wraps(func)
-        def wrap(self, context, command, dispatcher, **kwargs):
+        def wrap(self, context, dispatcher, **kwargs):
             if context.channel_type in channel_types:
-                context.say(
-                    f'Sorry, `{dispatcher.LEADER}{command}` cannot be run here'
-                )
+                # We only say something for commands, others will just be noops
+                command = kwargs.get('command', None)
+                if command is not None:
+                    context.say(
+                        f'Sorry, `{dispatcher.LEADER}{command}` cannot be run here'
+                    )
                 return
-            return func(
-                self, context, command=command, dispatcher=dispatcher, **kwargs
-            )
+            return func(self, context, dispatcher=dispatcher, **kwargs)
 
         return wrap
 
