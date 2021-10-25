@@ -14,6 +14,7 @@ ALLOWED_HOSTS = environ.get(
 
 INSTALLED_APPS = [
     'handler.apps.HandlerConfig',
+    'handler_loud.apps.HandlerLoudConfig',
     'handler_memory.apps.HandlerMemoryConfig',
     'handler_responder.apps.HandlerResponderConfig',
     'handler_sparkles.apps.HandlerSparklesConfig',
