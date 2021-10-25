@@ -5,6 +5,7 @@ from simone.handlers import Registry, session
 
 
 def emojify_number(value):
+    # TODO: translate
     return (
         str(value)
         .replace('0', ':zero:')
