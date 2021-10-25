@@ -318,7 +318,7 @@ class SlackListener(object):
             )
         else:
             if text.startswith(self.bot_mention):
-                text = text.replace(f'{self.bot_mention} ', '')
+                text = text.replace(f'{self.bot_mention} ', '', 1)
                 self.dispatcher.command(
                     context=SlackContext(
                         app=self.app,
@@ -336,7 +336,7 @@ class SlackListener(object):
                 text.startswith(self.dispatcher.LEADER)
                 and text[len(self.dispatcher.LEADER)] != ' '
             ):
-                text = text.replace(self.dispatcher.LEADER, '')
+                text = text.replace(self.dispatcher.LEADER, '', 1)
                 self.dispatcher.command(
                     context=SlackContext(
                         app=self.app,
