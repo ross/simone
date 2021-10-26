@@ -174,6 +174,7 @@ class Dispatcher(object):
         '''
         Note: this will clean up whitespace in the command & text
         '''
+        self.log.debug('command: text=%s, kwargs=%s', text, kwargs)
         command_words, handler, command, text = self.find_handler(text)
         if handler:
             handler.command(
