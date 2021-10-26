@@ -8,6 +8,7 @@ from .help import Help
 from .joke import Joke
 from .ping import Ping
 from .quote import Quote
+from .random import Coin, Dice, EightBall
 from .stonks import Stonks
 from .wave import Wave
 from .weather import Weather
@@ -17,7 +18,10 @@ from .weather import Weather
 Registry
 session
 Advice
+Coin
+Dice
 Echo
+EightBall
 Greetings
 Help
 Joke
