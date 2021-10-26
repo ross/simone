@@ -1,6 +1,7 @@
 from django.utils.module_loading import autodiscover_modules
 from functools import partial, wraps
 from logging import getLogger
+import re
 
 from requests import Session
 
@@ -55,6 +56,21 @@ def exclude_channel_types(_func=None, channel_types={ChannelType.DIRECT}):
 
 
 exclude_private = exclude_channel_types
+
+
+def message_filter_regex(regex):
+    regex = re.compile(regex)
+
+    def decorate(func):
+        @wraps(func)
+        def wrap(self, context, text, **kwargs):
+            match = regex.match(text)
+            if match:
+                return func(self, context, text=text, match=match, **kwargs)
+
+        return wrap
+
+    return decorate
 
 
 class _Registry(object):
