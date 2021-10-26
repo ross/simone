@@ -3,7 +3,7 @@ from random import choice
 from simone.handlers import Registry, session
 
 
-class Joke(object):
+class Advice(object):
     '''
     Get sage advice on the subject of your choosing
 
@@ -56,4 +56,4 @@ class Joke(object):
         context.say(slip)
 
 
-Registry.register_handler(Joke())
+Registry.register_handler(Advice())
