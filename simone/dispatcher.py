@@ -1,4 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
+from cron_validator import CronValidator
+from datetime import datetime
 from django.conf import settings
 from django.db import connection, transaction
 from functools import wraps
@@ -6,6 +8,8 @@ from io import StringIO
 from logging import getLogger
 from pprint import pprint
 from pylev import levenshtein
+from time import sleep, time
+from threading import Thread
 
 from slacker.listeners import SlackListener
 
@@ -55,46 +59,59 @@ def dispatch(func):
     return wrap
 
 
-class Dispatcher(object):
+class Dispatcher(Thread):
     LEADER = '.'
 
     log = getLogger('Dispatcher')
 
     def __init__(self, handlers):
+        super().__init__(name='Dispatcher')
+
         self.handlers = handlers
 
-        self.listeners = [SlackListener(self)]
+        self.listeners = {'slack': SlackListener(self)}
 
         addeds = []
         commands = {}
         command_words = {}
         command_max_words = 0
+        crons = []
         joineds = []
         messages = []
         for handler in handlers:
             config = handler.config()
+            if config.get('added', False):
+                addeds.append(handler)
             for command in config.get('commands', []):
                 command = tuple(command.split())
                 commands[' '.join(command)] = handler
                 command_words[command] = handler
                 command_max_words = max(command_max_words, len(command))
-            if config.get('added', False):
-                addeds.append(handler)
+            for cron in config.get('crons', []):
+                if self.validate_cron(cron):
+                    # ^ will have shown warnings and we'll otherwise skip bad
+                    # cron configs
+                    crons.append((cron, handler))
             if config.get('joined', False):
                 joineds.append(handler)
             if config.get('messages', False):
                 messages.append(handler)
-        self.log.debug('__init__: command_words=%s', command_words)
 
         self.addeds = addeds
         self.commands = commands
         self.command_words = command_words
         self.command_max_words = command_max_words
+        self.crons = crons
         self.joineds = joineds
         self.messages = messages
 
+        if getattr(settings, 'CRON_ENABLED', True):
+            self.start()
+
     def urlpatterns(self):
-        return sum([l.urlpatterns() for l in self.listeners], [])
+        return sum(
+            [l.urlpatterns() for _, l in sorted(self.listeners.items())], []
+        )
 
     @dispatch
     def added(self, *args, **kwargs):
@@ -203,3 +220,70 @@ class Dispatcher(object):
     @dispatch
     def removed(self, *args, **kwargs):
         pprint({'type': 'removed', 'args': args, 'kwargs': kwargs})
+
+    # Cron stuffs
+
+    def validate_cron(self, cron):
+        listener = cron['listener']
+        if not listener:
+            self.log.warning('validate_cron: missing listener, cron=%s', cron)
+            return None
+        listener = self.listeners[listener]
+        if not listener:
+            self.log.warning(
+                'validate_cron: unrecognized listener=%s', cron.listener
+            )
+            return None
+        channel_name = cron['channel']
+        if not channel_name:
+            self.log.warning('validate_cron: missing channel, cron=%s', cron)
+            return None
+        channel = listener.channel(channel_name)
+        if not channel:
+            self.log.warning(
+                'validate: unrecognized channel=%s, listener=%s, keeping cron in case we later learn about it ',
+                channel_name,
+                listener,
+            )
+        when = cron.get('when', None)
+        if not when:
+            self.log.warning('validate_cron: missing when, cron=%s', cron)
+            return None
+        if not CronValidator.parse(when):
+            self.log.warning('validate_cron: invalid when, cron=%s', cron)
+            return None
+
+        return cron
+
+    def tick(self, now):
+        self.log.debug('tick: ')
+        # we've validated things during init so we can just use them here
+        for cron, handler in self.crons:
+            self.log.debug('tick:   cron=%s, handler=%s', cron, handler)
+            if not CronValidator.match_datetime(cron['when'], now):
+                # not time
+                continue
+            listener = self.listeners[cron['listener']]
+            channel = listener.channel(cron['channel'])
+            # we do need to check for channel here as we don't require them to
+            # exist at __init__ time in case we later learn about them
+            if not channel:
+                self.log.warning(
+                    'tick: unrecognized channel=%s, listener=%s',
+                    channel,
+                    listener,
+                )
+                continue
+            context = listener.context(channel=channel)
+            handler.cron(context, cron=cron, dispatcher=self)
+
+    def run(self):
+        self.log.info('run: starting')
+        while True:
+            start = time()
+            self.tick(datetime.utcnow())
+            elapsed = time() - start
+            pause = 60 - elapsed
+            self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)
+            if pause > 0:
+                sleep(pause)

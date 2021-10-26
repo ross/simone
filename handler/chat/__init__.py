@@ -8,6 +8,7 @@ from .joke import Joke
 from .ping import Ping
 from .quote import Quote
 from .stonks import Stonks
+from .sup import Sup
 from .wave import Wave
 from .weather import Weather
 
@@ -22,5 +23,6 @@ Joke
 Ping
 Quote
 Stonks
+Sup
 Wave
 Weather
