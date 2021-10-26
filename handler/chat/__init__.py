@@ -1,6 +1,7 @@
 # pulled in so that other handlers can include them from here for conveience
 from simone.handlers import Registry, session
 
+from .advice import Advice
 from .echo import Echo
 from .greetings import Greetings
 from .help import Help
@@ -15,6 +16,7 @@ from .weather import Weather
 # Quell warnings
 Registry
 session
+Advice
 Echo
 Greetings
 Help

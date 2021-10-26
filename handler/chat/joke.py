@@ -1,6 +1,7 @@
 from simone.handlers import Registry, session
 
 
+# Port of https://github.com/github/hubot-scripts/blob/master/src/scripts/advice.coffee
 class Joke(object):
     '''
     Tell a joke
