@@ -8,6 +8,11 @@ class ChannelType(Enum):
     DIRECT = 'direct'
 
 
+class SenderType(Enum):
+    USER = 'user'
+    BOT = 'bot'
+
+
 class BaseContext(object):
     def __init__(
         self,
@@ -63,3 +68,6 @@ class BaseContext(object):
     def __eq__(self, other):
         # only used in tests
         return self.__dict__ == other.__dict__
+
+    def __repr__(self):
+        return f'{self.__dict__}'

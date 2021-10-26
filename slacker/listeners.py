@@ -2,20 +2,14 @@ from django.conf import settings
 from django.http import HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import path
-from enum import Enum, auto
 from logging import getLogger
 from os import environ
 from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
 import re
 
-from simone.context import BaseContext, ChannelType
+from simone.context import BaseContext, ChannelType, SenderType
 from .models import Channel
-
-
-class SenderType(Enum):
-    USER = auto()
-    BOT = auto()
 
 
 class SlackException(Exception):
@@ -71,9 +65,6 @@ class SlackContext(BaseContext):
 
     def user_mention(self, user_id):
         return f'<@{user_id}>'
-
-    def __repr__(self):
-        return f'{self.__dict__}'
 
 
 class SlackListener(object):

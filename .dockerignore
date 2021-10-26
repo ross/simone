@@ -4,6 +4,7 @@
 # TODO: find a good way to keep this in sync
 !handler/*.py
 !handler/chat/*.py
+!handler/management/*.py
 !handler/migrations/*.py
 !handler_loud/*.py
 !handler_loud/migrations/*.py
