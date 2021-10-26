@@ -5,7 +5,7 @@ from .base import DispatcherMixin
 
 
 class Command(DispatcherMixin, BaseCommand):
-    name = 'chat_command'
+    name = 'chat_message'
 
     def dispatch(self, *args, **kwargs):
-        dispatcher.command(*args, **kwargs)
+        dispatcher.message(*args, **kwargs)
