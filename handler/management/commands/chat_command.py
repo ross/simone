@@ -6,8 +6,12 @@ from simone.urls import dispatcher
 
 
 class ConsoleContext(BaseContext):
-    def __init__(self, channel_id, channel_name, channel_type, timestamp, bot_user_id):
-        super().__init__(channel_id, channel_name, channel_type, timestamp, bot_user_id)
+    def __init__(
+        self, channel_id, channel_name, channel_type, timestamp, bot_user_id
+    ):
+        super().__init__(
+            channel_id, channel_name, channel_type, timestamp, bot_user_id
+        )
 
     def say(self, text, reply=False, to_user=False):
         print(text)
@@ -19,6 +23,7 @@ class ConsoleContext(BaseContext):
 
     def user_mention(self, user_id):
         return f'<@{user_id}>'
+
 
 class Command(BaseCommand):
     log = getLogger('ChatCommand')
@@ -32,10 +37,18 @@ class Command(BaseCommand):
         channel_name = 'channel-name'
         channel_type = ChannelType.PUBLIC
         timestamp = 'when'
-        bot_user_id='bot-id'
-        context = ConsoleContext(channel_id, channel_name, channel_type, timestamp, bot_user_id)
+        bot_user_id = 'bot-id'
+        context = ConsoleContext(
+            channel_id, channel_name, channel_type, timestamp, bot_user_id
+        )
         text = 'echo ping'
         sender = 'user-id'
         sender_type = SenderType.USER
         mentions = ['other', 'another']
-        dispatcher.command(context, text, sender=sender, sender_type=sender_type, mentions=mentions)
+        dispatcher.command(
+            context,
+            text,
+            sender=sender,
+            sender_type=sender_type,
+            mentions=mentions,
+        )
