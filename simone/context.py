@@ -8,6 +8,11 @@ class ChannelType(Enum):
     DIRECT = 'direct'
 
 
+class SenderType(Enum):
+    USER = 'user'
+    BOT = 'bot'
+
+
 class BaseContext(object):
     def __init__(
         self,
@@ -63,3 +68,34 @@ class BaseContext(object):
     def __eq__(self, other):
         # only used in tests
         return self.__dict__ == other.__dict__
+
+    def __repr__(self):
+        return f'{self.__dict__}'
+
+
+class ConsoleContext(BaseContext):
+    '''
+    Useful for development & testing purposes
+    '''
+
+    def __init__(
+        self, channel_id, channel_name, channel_type, timestamp, bot_user_id
+    ):
+        super().__init__(
+            channel_id, channel_name, channel_type, timestamp, bot_user_id
+        )
+
+    def say(self, text, reply=False, to_user=False):
+        if to_user:
+            text = f'{to_user}> {text}'
+        elif reply:
+            text = f'> {text}'
+        print(text)
+
+    def react(self, emoji):
+        self.app.client.reactions_add(
+            channel=self.channel_id, name=emoji, timestamp=self.timestamp
+        )
+
+    def user_mention(self, user_id):
+        return f'<{user_id}>'

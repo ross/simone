@@ -21,3 +21,4 @@ slack-sdk==3.11.2
 sqlparse==0.4.2
 tqdm==4.62.3
 urllib3==1.26.7
+word2number==1.1
