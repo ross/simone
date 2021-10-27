@@ -6,6 +6,8 @@
 !handler/chat/*.py
 !handler/management/*.py
 !handler/migrations/*.py
+!handler_about/*.py
+!handler_about/migrations/*.py
 !handler_loud/*.py
 !handler_loud/migrations/*.py
 !handler_memory/*.py
