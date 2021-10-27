@@ -8,8 +8,8 @@ from io import StringIO
 from logging import getLogger
 from pprint import pprint
 from pylev import levenshtein
-from time import sleep, time
-from threading import Thread
+from time import time
+from threading import Event, Thread
 
 from slacker.listeners import SlackListener
 
@@ -104,9 +104,6 @@ class Dispatcher(Thread):
         self.crons = crons
         self.joineds = joineds
         self.messages = messages
-
-        if getattr(settings, 'CRON_ENABLED', True):
-            self.start()
 
     def urlpatterns(self):
         return sum(
@@ -280,11 +277,18 @@ class Dispatcher(Thread):
 
     def run(self):
         self.log.info('run: starting')
-        while True:
+        self.stopper = Event()
+        running = True
+        while running:
             start = time()
             self.tick(datetime.utcnow())
             elapsed = time() - start
             pause = 60 - elapsed
             self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)
             if pause > 0:
-                sleep(pause)
+                running = not self.stopper.wait(timeout=pause)
+        self.log.info('run: stopped')
+
+    def stop(self):
+        self.log.info('stop: stopping')
+        self.stopper.set()
