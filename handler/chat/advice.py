@@ -13,7 +13,7 @@ class Advice(object):
     To get advice on a specific subject
       @simone what should i do about [thing]
       @simone what do you think about [thing]
-      @simone what how do you handle [thing]
+      @simone how do you handle [thing]
     '''
 
     BASE_URL = 'https://api.adviceslip.com/advice'
