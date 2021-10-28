@@ -126,6 +126,21 @@ class SlackListener(object):
 
         return [path("slack/events", slack_events_handler, name="slack_events")]
 
+    def channel(self, channel_name):
+        try:
+            return Channel.objects.get(name=channel_name)
+        except Channel.DoesNotExist:
+            return None
+
+    def context(self, channel=None, thread=None, timestamp=None):
+        return SlackContext(
+            app=self.app,
+            channel=channel,
+            thread=thread,
+            timestamp=timestamp,
+            bot_user_id=self.bot_user_id,
+        )
+
     @property
     def auth_info(self):
         '''
@@ -260,12 +275,7 @@ class SlackListener(object):
                     )
                     return
                 self.dispatcher.removed(
-                    context=SlackContext(
-                        app=self.app,
-                        channel=removed_from,
-                        timestamp=ts,
-                        bot_user_id=self.bot_user_id,
-                    ),
+                    context=self.context(channel=removed_from, timestamp=ts),
                     remover=user,
                 )
             else:
@@ -293,12 +303,8 @@ class SlackListener(object):
         if previous_text is not None:
             # Note: we ignore any edited commands
             self.dispatcher.edit(
-                context=SlackContext(
-                    app=self.app,
-                    channel=channel,
-                    thread=thread,
-                    timestamp=ts,
-                    bot_user_id=bot_user_id,
+                context=self.context(
+                    channel=channel, thread=thread, timestamp=ts
                 ),
                 text=text,
                 previous_text=previous_text,
@@ -311,12 +317,8 @@ class SlackListener(object):
             if text.startswith(self.bot_mention):
                 text = text.replace(f'{self.bot_mention} ', '', 1)
                 self.dispatcher.command(
-                    context=SlackContext(
-                        app=self.app,
-                        channel=channel,
-                        thread=thread,
-                        timestamp=ts,
-                        bot_user_id=bot_user_id,
+                    context=self.context(
+                        channel=channel, thread=thread, timestamp=ts
                     ),
                     text=text,
                     sender=sender,
@@ -329,12 +331,8 @@ class SlackListener(object):
             ):
                 text = text.replace(self.dispatcher.LEADER, '', 1)
                 self.dispatcher.command(
-                    context=SlackContext(
-                        app=self.app,
-                        channel=channel,
-                        thread=thread,
-                        timestamp=ts,
-                        bot_user_id=bot_user_id,
+                    context=self.context(
+                        channel=channel, thread=thread, timestamp=ts
                     ),
                     text=text,
                     sender=sender,
@@ -343,12 +341,8 @@ class SlackListener(object):
                 )
             else:
                 self.dispatcher.message(
-                    context=SlackContext(
-                        app=self.app,
-                        channel=channel,
-                        thread=thread,
-                        timestamp=ts,
-                        bot_user_id=bot_user_id,
+                    context=self.context(
+                        channel=channel, thread=thread, timestamp=ts
                     ),
                     text=text,
                     sender=sender,
@@ -365,22 +359,12 @@ class SlackListener(object):
         event_ts = event['event_ts']
         if joiner == self.bot_user_id:
             self.dispatcher.added(
-                context=SlackContext(
-                    app=self.app,
-                    channel=channel,
-                    timestamp=event_ts,
-                    bot_user_id=self.bot_user_id,
-                ),
+                context=self.context(channel=channel, timestamp=event_ts),
                 inviter=inviter,
             )
         else:
             self.dispatcher.joined(
-                context=SlackContext(
-                    app=self.app,
-                    channel=channel,
-                    timestamp=event_ts,
-                    bot_user_id=self.bot_user_id,
-                ),
+                context=self.context(channel=channel, timestamp=event_ts),
                 joiner=joiner,
                 inviter=inviter,
             )
@@ -393,12 +377,7 @@ class SlackListener(object):
         leaver = event['user']
         event_ts = event['event_ts']
         self.dispatcher.left(
-            context=SlackContext(
-                app=self.app,
-                channel=channel,
-                timestamp=event_ts,
-                bot_user_id=self.bot_user_id,
-            ),
+            context=self.context(channel=channel, timestamp=event_ts),
             leaver=leaver,
             kicker=kicker,
         )
