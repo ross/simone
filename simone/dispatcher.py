@@ -6,7 +6,7 @@ from django.db import connection, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
-from pprint import pprint
+from pprint import pformat, pprint
 from pylev import levenshtein
 from time import time
 from threading import Event, Thread
@@ -61,6 +61,8 @@ def dispatch(func):
 
 class Dispatcher(Thread):
     LEADER = '.'
+    USER_PLACEHOLDER = '<@user-id>'
+    CHANNEL_PLACEHOLDER = '<#channel-id>'
 
     log = getLogger('Dispatcher')
 
@@ -96,6 +98,7 @@ class Dispatcher(Thread):
                 joineds.append(handler)
             if config.get('messages', False):
                 messages.append(handler)
+        self.log.debug('__init__: command_words=%s', pformat(command_words))
 
         self.addeds = addeds
         self.commands = commands
@@ -160,15 +163,23 @@ class Dispatcher(Thread):
 
             context.say(buf.getvalue())
 
-    def find_handler(self, text):
+    def find_command_handler(self, text):
         # get rid of any leading and trailing space and generate our command
         # words
         pieces = text.strip().split()
-        command_words = [
-            tuple(pieces[0:i])
-            for i in range(min(len(pieces), self.command_max_words), 0, -1)
-        ]
-        self.log.debug('find_handler: command_words=%s', command_words)
+        # create a set of pieces with placeholders as appropriate
+        processed_pieces = []
+        for piece in pieces:
+            if piece.startswith('<@'):
+                # user placeholder
+                piece = self.USER_PLACEHOLDER
+            elif piece.startswith('<#'):
+                # channel placeholder
+                piece = self.CHANNEL_PLACEHOLDER
+            processed_pieces.append(piece)
+        n = min(len(processed_pieces), self.command_max_words)
+        command_words = [tuple(processed_pieces[0:i]) for i in range(n, 0, -1)]
+        self.log.debug('find_command_handler: command_words=%s', command_words)
         # look for matching commands
         for command_word in command_words:
             try:
@@ -177,10 +188,17 @@ class Dispatcher(Thread):
                 command = ' '.join(command_word)
                 n = len(command_word)
                 text = ' '.join(pieces[n:])
+                self.log.debug(
+                    'find_command_handler: match handler=%s, command=%s, text=%s',
+                    handler,
+                    command,
+                    text,
+                )
                 return (command_words, handler, command, text)
             except KeyError:
                 pass
 
+        self.log.debug('find_command_handler: no match')
         return (command_words, None, None, None)
 
     @dispatch
@@ -189,7 +207,7 @@ class Dispatcher(Thread):
         Note: this will clean up whitespace in the command & text
         '''
         self.log.debug('command: text=%s, kwargs=%s', text, kwargs)
-        command_words, handler, command, text = self.find_handler(text)
+        command_words, handler, command, text = self.find_command_handler(text)
         if handler:
             handler.command(
                 context, command=command, text=text, dispatcher=self, **kwargs
