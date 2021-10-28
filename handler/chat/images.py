@@ -27,7 +27,7 @@ class Images(object):
         resp = session.get(
             self.URL,
             params=params,
-            timeout=15,
+            timeout=20,
             headers={'content-type': 'application/json'},
         )
         resp.raise_for_status()

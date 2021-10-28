@@ -38,7 +38,8 @@ def dispatch(func):
                     kwargs,
                 )
                 # We only want to reply to errors on commands
-                if 'command' in kwargs:
+                # TODO: this is kind of ugly
+                if func.__name__ == 'command':
                     context.say(
                         'An error occured while responding to this message',
                         reply=True,
