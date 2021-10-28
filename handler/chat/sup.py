@@ -28,7 +28,9 @@ class Sup(object):
         }
 
     def cron(self, context, **kwargs):
-        context.converse(['What have you all been up to lately?', choice(self.UP_TOS)])
+        context.converse(
+            ['What have you all been up to lately?', choice(self.UP_TOS)]
+        )
 
 
 Registry.register_handler(Sup())
