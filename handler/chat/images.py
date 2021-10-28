@@ -41,27 +41,6 @@ class Images(object):
 Registry.register_handler(Images())
 
 
-class Babies(Images):
-    '''
-    Baby images for all the kid lovers
-
-    To get a random of a baby
-      .baby
-
-    To get image bombed with random images of babies
-      .baby bomb
-    '''
-
-    def config(self):
-        return {'commands': ('baby', 'baby bomb')}
-
-    def command(self, context, text, **kwargs):
-        super().command(context, text='baby', **kwargs)
-
-
-Registry.register_handler(Babies())
-
-
 class Kittens(Images):
     '''
     Kitten images for all the cat lovers

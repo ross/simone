@@ -5,7 +5,7 @@ from .advice import Advice
 from .echo import Echo
 from .greetings import Greetings
 from .help import Help
-from .images import Babies, Images, Kittens, Puppies
+from .images import Images, Kittens, Puppies
 from .joke import Joke
 from .ping import Ping
 from .quote import Quote
@@ -19,7 +19,6 @@ from .weather import Weather
 Registry
 session
 Advice
-Babies
 Coin
 Dice
 Echo
