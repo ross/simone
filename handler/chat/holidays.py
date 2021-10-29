@@ -7,7 +7,13 @@ from simone.handlers import Registry
 
 class Holidays(object):
     '''
-    Echo back whatever is said
+    List out holidays around the world
+
+    To get today's holidays
+      .hollidays
+
+    To get holidays for a specific date
+      .hollidays 2021-07-04
     '''
 
     def config(self):
