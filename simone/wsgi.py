@@ -14,3 +14,8 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simone.settings')
 
 application = get_wsgi_application()
+
+# needs to come after the os.environ bit above
+from simone.urls import cron  # noqa
+
+cron.start()
