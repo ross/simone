@@ -26,6 +26,37 @@ def background(func):
     return submit
 
 
+def dispatch_with_error(func):
+    @background
+    @wraps(func)
+    def wrap(self, context, *args, **kwargs):
+        ret = None
+        with transaction.atomic():
+            try:
+                ret = func(self, context, *args, **kwargs)
+            except Exception:
+                self.log.exception(
+                    'dispatch failed: context=%s, args=%s, kwargs=%s',
+                    context,
+                    args,
+                    kwargs,
+                )
+                context.say(
+                    'An error occured while responding to this message',
+                    reply=True,
+                )
+        # We have to close the connection explicitly, if we don't things seem
+        # to "hang" somewhere in transaction.atomic() in future jobs :-(
+        # This isn't a problem in the dev server with sqlite3, but not clear if
+        # that's a difference between mysql and sqlite3 or something about dev
+        # mode.
+        # TODO: figure out what's going on here to see if we can avoid closing
+        connection.close()
+        return ret
+
+    return wrap
+
+
 def dispatch(func):
     @background
     @wraps(func)
@@ -41,13 +72,6 @@ def dispatch(func):
                     args,
                     kwargs,
                 )
-                # We only want to reply to errors on commands
-                # TODO: this is kind of ugly
-                if func.__name__ == 'command':
-                    context.say(
-                        'An error occured while responding to this message',
-                        reply=True,
-                    )
         # We have to close the connection explicitly, if we don't things seem
         # to "hang" somewhere in transaction.atomic() in future jobs :-(
         # This isn't a problem in the dev server with sqlite3, but not clear if
@@ -202,7 +226,7 @@ class Dispatcher(Thread):
         self.log.debug('find_command_handler: no match')
         return (command_words, None, None, None)
 
-    @dispatch
+    @dispatch_with_error
     def command(self, context, text, **kwargs):
         '''
         Note: this will clean up whitespace in the command & text
