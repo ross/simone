@@ -22,7 +22,7 @@ class Sup(object):
                 {
                     'listener': 'slack',
                     'channel': 'greetings',
-                    'when': '00 13 * * *',
+                    'when': '00 13 * * 1',
                 }
             ]
         }
