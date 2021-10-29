@@ -60,7 +60,7 @@ def dispatch(func):
     return wrap
 
 
-class Dispatcher(Thread):
+class Dispatcher(object):
     LEADER = '.'
     USER_PLACEHOLDER = '<@user-id>'
     CHANNEL_PLACEHOLDER = '<#channel-id>'
@@ -68,8 +68,6 @@ class Dispatcher(Thread):
     log = getLogger('Dispatcher')
 
     def __init__(self, handlers):
-        super().__init__(name='Dispatcher')
-
         self.handlers = handlers
 
         self.listeners = {'slack': SlackListener(self)}
@@ -294,13 +292,21 @@ class Dispatcher(Thread):
             context = listener.context(channel=channel)
             handler.cron(context, cron=cron, dispatcher=self)
 
+
+class Cron(Thread):
+    log = getLogger('Cron')
+
+    def __init__(self, dispatcher):
+        super().__init__(name='Dispatcher')
+        self.dispatcher = dispatcher
+
     def run(self):
         self.log.info('run: starting')
         self.stopper = Event()
         running = True
         while running:
             start = time()
-            self.tick(datetime.utcnow())
+            self.dispatcher.tick(datetime.utcnow())
             elapsed = time() - start
             pause = 60 - elapsed
             self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)
