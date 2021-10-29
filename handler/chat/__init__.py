@@ -5,6 +5,7 @@ from .advice import Advice
 from .echo import Echo
 from .greetings import Greetings
 from .help import Help
+from .holidays import Holidays
 from .images import Images, Kittens, Puppies
 from .joke import Joke
 from .ping import Ping
@@ -26,6 +27,7 @@ Echo
 EightBall
 Greetings
 Help
+Holidays
 Images
 Joke
 Kittens
