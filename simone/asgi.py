@@ -16,6 +16,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'simone.settings')
 application = get_asgi_application()
 
 # needs to come after the os.environ bit above
+from django.conf import settings  # noqa
 from simone.urls import cron  # noqa
 
-cron.start()
+if getattr(settings, 'CRON_ENABLED', True):
+    cron.start()
