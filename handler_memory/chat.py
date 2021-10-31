@@ -24,7 +24,11 @@ class Memory(object):
     @only_public
     def command(self, context, command, text, **kwargs):
         if command in ('rem', 'remember'):
-            if text[0] == '|':
+            if not text:
+                context.say(
+                    "I need more to know what you're looking for, maybe see `.help rem`"
+                )
+            elif text[0] == '|':
                 # search
                 text = text.split('|', 1)[1].strip()
                 max_items = 2
