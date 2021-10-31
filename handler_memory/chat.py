@@ -27,14 +27,19 @@ class Memory(object):
             if text[0] == '|':
                 # search
                 text = text.split('|', 1)[1].strip()
-                items = Item.objects.filter(key__icontains=text)[:25]
+                max_items = 2
+                items = Item.objects.filter(key__icontains=text)[
+                    : max_items + 1
+                ]
                 if items:
                     buf = StringIO()
                     buf.write('You might be looking for one of these:\n```')
-                    for item in items:
+                    for item in items[:max_items]:
                         buf.write('  ')
                         buf.write(item.key)
                         buf.write('\n')
+                    if len(items) > max_items:
+                        buf.write('  ...')
                     buf.write('```')
                     msg = buf.getvalue()
                 else:
