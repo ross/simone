@@ -100,7 +100,6 @@ class Dispatcher(object):
         commands = {}
         command_words = {}
         command_max_words = 0
-        crons = []
         joineds = []
         messages = []
         for handler in handlers:
@@ -112,11 +111,6 @@ class Dispatcher(object):
                 commands[' '.join(command)] = handler
                 command_words[command] = handler
                 command_max_words = max(command_max_words, len(command))
-            for cron in config.get('crons', []):
-                if self.validate_cron(cron):
-                    # ^ will have shown warnings and we'll otherwise skip bad
-                    # cron configs
-                    crons.append((cron, handler))
             if config.get('joined', False):
                 joineds.append(handler)
             if config.get('messages', False):
@@ -127,9 +121,28 @@ class Dispatcher(object):
         self.commands = commands
         self.command_words = command_words
         self.command_max_words = command_max_words
-        self.crons = crons
+        self._crons = None
         self.joineds = joineds
         self.messages = messages
+
+    @property
+    def crons(self):
+        # load crons on demand since validating them requires db access. If we
+        # don't delay it we can't do the initial migration etc.
+        if self._crons is None:
+            self.log.debug('crons: loading')
+            crons = []
+            for handler in self.handlers:
+                for cron in handler.config.get('crons', []):
+                    if self.validate_cron(cron):
+                        # ^ will have shown warnings and we'll otherwise skip
+                        # bad cron configs
+                        crons.append((cron, handler))
+
+            self.log.debug('crons: loaded crons=%s', pformat(crons))
+            self._crons = crons
+
+        return self._crons
 
     def urlpatterns(self):
         return sum(
