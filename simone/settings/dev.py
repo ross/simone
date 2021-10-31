@@ -1,3 +1,4 @@
+from os import environ
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -7,12 +8,26 @@ DEBUG = True
 
 CRON_ENABLED = False
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db' / 'db.sqlite3',
+
+if 'SIMONE_DB_NAME' in environ:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'mysql.connector.django',
+            'NAME': environ['SIMONE_DB_NAME'],
+            'USER': environ['SIMONE_DB_USER'],
+            'PASSWORD': environ['SIMONE_DB_PASSWORD'],
+            'HOST': environ['SIMONE_DB_HOST'],
+            'PORT': environ.get('SIMONE_DB_PORT', '3306'),
+            'CONN_MAX_AGE': 300,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db' / 'db.sqlite3',
+        }
+    }
 
 LOGGING = {
     'version': 1,
