@@ -24,17 +24,26 @@ class Memory(object):
     @only_public
     def command(self, context, command, text, **kwargs):
         if command in ('rem', 'remember'):
-            if text[0] == '|':
+            if not text:
+                context.say(
+                    "I need more to know what you're looking for, maybe see `.help rem`"
+                )
+            elif text[0] == '|':
                 # search
                 text = text.split('|', 1)[1].strip()
-                items = Item.objects.filter(key__icontains=text)[:25]
+                max_items = 25
+                items = Item.objects.filter(key__icontains=text)[
+                    : max_items + 1
+                ]
                 if items:
                     buf = StringIO()
                     buf.write('You might be looking for one of these:\n```')
-                    for item in items:
+                    for item in items[:max_items]:
                         buf.write('  ')
                         buf.write(item.key)
                         buf.write('\n')
+                    if len(items) > max_items:
+                        buf.write('  ...')
                     buf.write('```')
                     msg = buf.getvalue()
                 else:
