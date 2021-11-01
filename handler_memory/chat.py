@@ -31,7 +31,7 @@ class Memory(object):
             elif text[0] == '|':
                 # search
                 text = text.split('|', 1)[1].strip()
-                max_items = 2
+                max_items = 25
                 items = Item.objects.filter(key__icontains=text)[
                     : max_items + 1
                 ]
