@@ -80,6 +80,7 @@ class Dispatcher(object):
             settings, 'SLACK_TOKEN_VERIFICATION', False
         )
         app = App(
+            name='simone',
             token=environ["SLACK_BOT_TOKEN"],
             signing_secret=environ["SLACK_SIGNING_SECRET"],
             token_verification_enabled=token_verification,
