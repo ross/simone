@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from cron_validator import CronValidator
 from datetime import datetime
 from django.conf import settings
-from django.db import transaction
+from django.db import close_old_connections, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
@@ -338,11 +338,16 @@ class Cron(Thread):
             # Cron is its own thread so we're in the background when tick is
             # called so no need to submit to the executor. we do want to wrap
             # it with try/except to catch handler problems and avoid killing
-            # the thread
+            # the thread as well as wrap each time around in calls to check
+            # our database connections health (name doesn't match
+            # functionality)
+            close_old_connections()
             try:
                 self.dispatcher.tick(datetime.utcnow())
             except Exception:
                 self.log.exception('run: tick failed')
+            finally:
+                close_old_connections()
             elapsed = time() - start
             pause = 60 - elapsed
             self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)
