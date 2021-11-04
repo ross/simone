@@ -108,5 +108,5 @@ class Responder(object):
                 break
 
 
-cooldown = getattr(settings, 'RESPONDER_COOLDOWN', 60)
+cooldown = getattr(settings, 'RESPONDER_COOLDOWN', 300)
 Registry.register_handler(Responder(cooldown))
