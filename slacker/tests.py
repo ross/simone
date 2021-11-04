@@ -968,7 +968,8 @@ class TestSlackListener(TestCase):
         )
 
     def test_channel_rename(self):
-        listener = SlackListener(dispatcher=None, app=None)
+        app = DummyApp()
+        listener = SlackListener(dispatcher=None, app=app)
 
         # create a channel we've never seen before
         event = {

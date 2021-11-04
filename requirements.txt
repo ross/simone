@@ -21,7 +21,7 @@ pytz==2021.3
 regex==2021.10.8
 requests==2.26.0
 six==1.16.0
-slack-bolt==1.9.2
+slack-bolt==1.10.0
 slack-sdk==3.11.2
 sqlparse==0.4.2
 tqdm==4.62.3
