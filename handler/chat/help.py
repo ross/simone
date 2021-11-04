@@ -45,7 +45,14 @@ class Help(object):
             buf = StringIO()
             buf.write('Supported commands:\n```')
             for command, handler in sorted(dispatcher.commands.items()):
-                buf.write(self._summarize_command(command, handler, dispatcher))
+                try:
+                    supress = handler.help_supress(command)
+                except AttributeError:
+                    supress = False
+                if not supress:
+                    buf.write(
+                        self._summarize_command(command, handler, dispatcher)
+                    )
             buf.write('```')
             self._command_list = buf.getvalue()
 
