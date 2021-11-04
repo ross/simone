@@ -26,7 +26,7 @@ class Help(object):
     def help_command(self, context, text, dispatcher):
         if text.startswith(dispatcher.LEADER):
             text = text[len(dispatcher.LEADER) :]
-        _, handler, _, _ = dispatcher.find_handler(text)
+        _, handler, _, _ = dispatcher.find_command_handler(text)
         if handler:
             context.say(f'Help for `{text}`\n```{handler.__doc__}```')
         else:
