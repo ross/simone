@@ -2,12 +2,14 @@ from concurrent.futures import ThreadPoolExecutor
 from cron_validator import CronValidator
 from datetime import datetime
 from django.conf import settings
-from django.db import connection, transaction
+from django.db import close_old_connections, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
+from os import environ
 from pprint import pformat, pprint
 from pylev import levenshtein
+from slack_bolt import App
 from time import time
 from threading import Event, Thread
 
@@ -15,19 +17,12 @@ from slacker.listeners import SlackListener
 
 
 max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
-executor = ThreadPoolExecutor(max_workers=max_dispatchers)
+executor = ThreadPoolExecutor(
+    max_workers=max_dispatchers, thread_name_prefix='simone-worker'
+)
 
 
-def background(func):
-    @wraps(func)
-    def submit(*args, **kwargs):
-        executor.submit(func, *args, **kwargs)
-
-    return submit
-
-
-def dispatch_with_error(func):
-    @background
+def dispatch_with_error_reporting(func):
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
         ret = None
@@ -45,20 +40,14 @@ def dispatch_with_error(func):
                     'An error occured while responding to this message',
                     reply=True,
                 )
-        # We have to close the connection explicitly, if we don't things seem
-        # to "hang" somewhere in transaction.atomic() in future jobs :-(
-        # This isn't a problem in the dev server with sqlite3, but not clear if
-        # that's a difference between mysql and sqlite3 or something about dev
-        # mode.
-        # TODO: figure out what's going on here to see if we can avoid closing
-        connection.close()
         return ret
 
     return wrap
 
 
+# TODO: we should put each handler in its own try/except so that if one fails
+# it doesn't take out the others
 def dispatch(func):
-    @background
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
         ret = None
@@ -72,13 +61,6 @@ def dispatch(func):
                     args,
                     kwargs,
                 )
-        # We have to close the connection explicitly, if we don't things seem
-        # to "hang" somewhere in transaction.atomic() in future jobs :-(
-        # This isn't a problem in the dev server with sqlite3, but not clear if
-        # that's a difference between mysql and sqlite3 or something about dev
-        # mode.
-        # TODO: figure out what's going on here to see if we can avoid closing
-        connection.close()
         return ret
 
     return wrap
@@ -94,13 +76,22 @@ class Dispatcher(object):
     def __init__(self, handlers):
         self.handlers = handlers
 
-        self.listeners = {'slack': SlackListener(self)}
+        token_verification = getattr(
+            settings, 'SLACK_TOKEN_VERIFICATION', False
+        )
+        app = App(
+            name='simone',
+            token=environ["SLACK_BOT_TOKEN"],
+            signing_secret=environ["SLACK_SIGNING_SECRET"],
+            token_verification_enabled=token_verification,
+            listener_executor=executor,
+        )
+        self.listeners = {'slack': SlackListener(self, app)}
 
         addeds = []
         commands = {}
         command_words = {}
         command_max_words = 0
-        crons = []
         joineds = []
         messages = []
         for handler in handlers:
@@ -112,11 +103,6 @@ class Dispatcher(object):
                 commands[' '.join(command)] = handler
                 command_words[command] = handler
                 command_max_words = max(command_max_words, len(command))
-            for cron in config.get('crons', []):
-                if self.validate_cron(cron):
-                    # ^ will have shown warnings and we'll otherwise skip bad
-                    # cron configs
-                    crons.append((cron, handler))
             if config.get('joined', False):
                 joineds.append(handler)
             if config.get('messages', False):
@@ -127,9 +113,28 @@ class Dispatcher(object):
         self.commands = commands
         self.command_words = command_words
         self.command_max_words = command_max_words
-        self.crons = crons
+        self._crons = None
         self.joineds = joineds
         self.messages = messages
+
+    @property
+    def crons(self):
+        # load crons on demand since validating them requires db access. If we
+        # don't delay it we can't do the initial migration etc.
+        if self._crons is None:
+            self.log.debug('crons: loading')
+            crons = []
+            for handler in self.handlers:
+                for cron in handler.config().get('crons', []):
+                    if self.validate_cron(cron):
+                        # ^ will have shown warnings and we'll otherwise skip
+                        # bad cron configs
+                        crons.append((cron, handler))
+
+            self.log.debug('crons: loaded crons=%s', pformat(crons))
+            self._crons = crons
+
+        return self._crons
 
     def urlpatterns(self):
         return sum(
@@ -224,7 +229,7 @@ class Dispatcher(object):
         self.log.debug('find_command_handler: no match')
         return (command_words, None, None, None)
 
-    @dispatch_with_error
+    @dispatch_with_error_reporting
     def command(self, context, text, **kwargs):
         '''
         Note: this will clean up whitespace in the command & text
@@ -330,7 +335,19 @@ class Cron(Thread):
         running = True
         while running:
             start = time()
-            self.dispatcher.tick(datetime.utcnow())
+            # Cron is its own thread so we're in the background when tick is
+            # called so no need to submit to the executor. we do want to wrap
+            # it with try/except to catch handler problems and avoid killing
+            # the thread as well as wrap each time around in calls to check
+            # our database connections health (name doesn't match
+            # functionality)
+            close_old_connections()
+            try:
+                self.dispatcher.tick(datetime.utcnow())
+            except Exception:
+                self.log.exception('run: tick failed')
+            finally:
+                close_old_connections()
             elapsed = time() - start
             pause = 60 - elapsed
             self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)

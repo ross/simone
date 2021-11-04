@@ -1,10 +1,7 @@
-from django.conf import settings
 from django.http import HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import path
 from logging import getLogger
-from os import environ
-from slack_bolt import App
 from slack_bolt.adapter.django import SlackRequestHandler
 import re
 
@@ -81,20 +78,11 @@ class SlackListener(object):
 
     log = getLogger('SlackListener')
 
-    def __init__(self, dispatcher, app=None):
+    def __init__(self, dispatcher, app):
         self.log.info('__init__: dispatcher=%s, app=%s', dispatcher, app)
         self.dispatcher = dispatcher
-
-        if app is None:
-            token_verification = getattr(
-                settings, 'SLACK_TOKEN_VERIFICATION', False
-            )
-            app = App(
-                token=environ["SLACK_BOT_TOKEN"],
-                signing_secret=environ["SLACK_SIGNING_SECRET"],
-                token_verification_enabled=token_verification,
-            )
         self.app = app
+
         self._auth_info = None
         self._bot_mention = None
 
