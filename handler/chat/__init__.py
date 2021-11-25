@@ -12,7 +12,6 @@ from .ping import Ping
 from .quote import Quote
 from .random import Coin, Dice, EightBall
 from .stonks import Stonks
-from .sup import Sup
 from .trash_talk import TrashTalk
 from .wave import Wave
 from .weather import Weather
@@ -36,7 +35,6 @@ Ping
 Puppies
 Quote
 Stonks
-Sup
 TrashTalk
 Wave
 Weather
