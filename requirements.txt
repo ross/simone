@@ -12,7 +12,7 @@ idna==3.3
 joblib==1.1.0
 korean-lunar-calendar==0.2.1
 mysql-connector-python==8.0.26
-nltk==3.6.5
+nltk==3.6.6
 protobuf==3.18.1
 pylev==1.4.0
 pymeeus==0.5.11
