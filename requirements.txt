@@ -1,4 +1,4 @@
-Django==3.2.8
+Django==3.2.12
 asgiref==3.4.1
 certifi==2021.10.8
 charset-normalizer==2.0.7
