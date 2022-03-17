@@ -1,0 +1,15 @@
+version: "3.9"  # optional since v1.27.0
+
+volumes:
+  simone-db-data:
+    name: simone-db-data
+
+services:
+  db:
+    image: mariadb:10.1
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: l3tmein
+    volumes:
+      - simone-db-data:/var/lib/mysql

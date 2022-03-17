@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+
+from os.path import join
+from subprocess import check_call, check_output
+from tempfile import TemporaryDirectory
+
+
+def print_packages(packages, heading):
+    print(f'{heading}:')
+    print('  ', end='')
+    print('\n  '.join(packages))
+
+
+with TemporaryDirectory() as tmpdir:
+    check_call(['python3', '-m', 'venv', tmpdir])
+
+    # base needs
+    base = [
+        'Django>3.2.12',
+        'cron-validator>=1.0.3',
+        'gunicorn>=20.1.0',
+        'holidays>=0.11.3.1',
+        'mysql-connector-python>=8.0.26',
+        'nltk>=3.6.6',
+        'pylev>=1.4.0',
+        'requests>=2.26.0',
+        'slack-bolt>=1.10.0',
+        'word2number>=1.1',
+    ]
+    check_call([join(tmpdir, 'bin', 'pip'), 'install'] + base)
+    frozen = check_output([join(tmpdir, 'bin', 'pip'), 'freeze'])
+    frozen = set(frozen.decode('utf-8').strip().split('\n'))
+
+    # dev additions
+    dev = [
+        'black>=21.9b0',
+        'django-debug-toolbar',
+        'mock',
+        'pycodestyle>=2.7.0',
+        'pyflakes>=2.3.1',
+    ]
+    check_call([join(tmpdir, 'bin', 'pip'), 'install'] + dev)
+    dev_frozen = check_output([join(tmpdir, 'bin', 'pip'), 'freeze'])
+    dev_frozen = set(dev_frozen.decode('utf-8').strip().split('\n')) - frozen
+
+# pip installs the module itself along with deps so we need to get that out of
+# our list by finding the thing that was file installed during dev
+frozen = sorted(frozen)
+dev_frozen = sorted(dev_frozen)
+
+print_packages(frozen, 'frozen')
+print_packages(dev_frozen, 'dev_frozen')
+
+with open('requirements.txt', 'w') as fh:
+    fh.write('\n'.join(frozen))
+    fh.write('\n')
+
+with open('requirements-dev.txt', 'w') as fh:
+    fh.write('\n'.join(dev_frozen))
+    fh.write('\n')
