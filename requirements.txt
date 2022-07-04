@@ -1,6 +1,6 @@
-Django==4.0.4
+Django==4.0.6
 PyMeeus==0.5.11
-asgiref==3.5.0
+asgiref==3.5.2
 certifi==2021.10.8
 charset-normalizer==2.0.12
 click==8.1.2
