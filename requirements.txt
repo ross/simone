@@ -1,4 +1,4 @@
-Django==4.0.6
+Django==4.0.7
 PyMeeus==0.5.11
 asgiref==3.5.2
 certifi==2021.10.8
