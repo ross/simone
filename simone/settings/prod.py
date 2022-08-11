@@ -22,8 +22,8 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'simple': {
-            'format': '%(asctime)s %(levelname)-5s %(name)s %(message)s',
-            'datefmt': '%Y-%m-%dT%H:%M:%SZ',
+            'format': '%(asctime)s.%(msecs)03d %(levelname)-5s %(name)s %(message)s',
+            'datefmt': '%Y-%m-%dT%H:%M:%S',
         }
     },
     'handlers': {
