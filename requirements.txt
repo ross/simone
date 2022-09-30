@@ -10,7 +10,7 @@ gunicorn==20.1.0
 hijri-converter==2.2.3
 holidays==0.13
 idna==3.3
-joblib==1.1.0
+joblib==1.2.0
 korean-lunar-calendar==0.2.1
 mysql-connector-python==8.0.28
 nltk==3.7
