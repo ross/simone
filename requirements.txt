@@ -13,9 +13,9 @@ holidays==0.16
 idna==3.4
 joblib==1.2.0
 korean-lunar-calendar==0.3.1
-mysql-connector-python==8.0.31
+mysql-connector-python==8.0.28
 nltk==3.7
-protobuf==3.20.1
+protobuf==4.21.8
 pylev==1.4.0
 python-dateutil==2.8.2
 pytz==2022.5
