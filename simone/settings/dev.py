@@ -63,3 +63,5 @@ LOGGING = {
         },
     },
 }
+
+RESPONDER_COOLDOWN = 30
