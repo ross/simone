@@ -36,3 +36,5 @@ LOGGING = {
     'root': {'level': _LEVEL, 'handlers': ('console',)},
     'loggers': {'django.db.backends': {'level': 'INFO'}},
 }
+
+RESPONDER_COOLDOWN = 3600
