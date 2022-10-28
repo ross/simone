@@ -30,6 +30,8 @@ docker run -d --restart=unless-stopped --name simone -p $PORT:6444 \
     -e DJANGO_LOGGING_LEVEL \
     -e DJANGO_SECRET_KEY \
     -e IEX_API_TOKEN \
+    -e OPENVERSE_CLIENT_ID \
+    -e OPENVERSE_CLIENT_SECRET \
     -e OPEN_WEATHER_MAP_APP_ID \
     -e SIMONE_DB_HOST \
     -e SIMONE_DB_NAME \
