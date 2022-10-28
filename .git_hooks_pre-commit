@@ -10,11 +10,13 @@ ROOT=$(dirname "$GIT")
 
 export DJANGO_SECRET_KEY="django-insecure-96-g#w7mtb#=itlt(&1v0)*vgm_gz+&=*u8g!bpz0x#a2jg-qb"
 export IEX_API_TOKEN=""
-export WSJ_QUOTES_CKEY=""
-export WSJ_QUOTES_ENTITLEMENT_TOKEN=""
+export OPENVERSE_CLIENT_ID=""
+export OPENVERSE_CLIENT_SECRET=""
 export OPEN_WEATHER_MAP_APP_ID=""
 export SLACK_BOT_TOKEN=""
 export SLACK_SIGNING_SECRET=""
+export WSJ_QUOTES_CKEY=""
+export WSJ_QUOTES_ENTITLEMENT_TOKEN=""
 
 "$ROOT/script/lint"
 "$ROOT/script/format" --check --quiet || (echo "Formatting check failed, run ./script/format" && exit 1)
