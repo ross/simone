@@ -63,6 +63,7 @@ class Stonks(object):
         'STOCK/US/OOTC',  # US OTC individual stocks
         'CURRENCY/US/XTUP',  # Currencies
         'CRYPTOCURRENCY/US/CoinDesk',  # Cryptocurrencies
+        'FUTURE/US/XCBT',  # US Commodity Futures
     )
     WSJ_ALIASES = {
         'DJIA': 'INDEX/US/Dow Jones Global/DJIA',
@@ -107,13 +108,17 @@ class Stonks(object):
 
     def lookup_wsj(self, text):
         text = text.replace('-', '.')
-        try:
-            id_param = self.WSJ_ALIASES[text]
-            self.log.debug('alias id_param=%s', id_param)
-        except KeyError:
-            namespaced = [f'{tok}/{text}' for tok in self.WSJ_NAMESPACES]
-            id_param = ','.join(namespaced)
-            self.log.debug('namespaced id_param=%s', id_param)
+        if '/' in text:
+            # try an exact match
+            id_param = text
+        else:
+            try:
+                id_param = self.WSJ_ALIASES[text]
+                self.log.debug('alias id_param=%s', id_param)
+            except KeyError:
+                namespaced = [f'{tok}/{text}' for tok in self.WSJ_NAMESPACES]
+                id_param = ','.join(namespaced)
+                self.log.debug('namespaced id_param=%s', id_param)
 
         resp = session.get(
             self.WSJ_URL,
