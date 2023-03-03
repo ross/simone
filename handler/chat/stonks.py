@@ -63,6 +63,7 @@ class Stonks(object):
         'STOCK/US/OOTC',  # US OTC individual stocks
         'CURRENCY/US/XTUP',  # Currencies
         'CRYPTOCURRENCY/US/CoinDesk',  # Cryptocurrencies
+        'FUTURE/US/XCBT',  # US Commodity Futures
     )
     WSJ_ALIASES = {
         'DJIA': 'INDEX/US/Dow Jones Global/DJIA',
