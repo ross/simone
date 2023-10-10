@@ -26,5 +26,5 @@ slack-bolt==1.15.2
 slack-sdk==3.19.1
 sqlparse==0.4.4
 tqdm==4.64.1
-urllib3==1.26.12
+urllib3==1.26.17
 word2number==1.1
