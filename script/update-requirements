@@ -34,7 +34,7 @@ with TemporaryDirectory() as tmpdir:
 
     # dev additions
     dev = [
-        'black>=21.9b0',
+        'black>=24.3.0,<25.0.0',
         'django-debug-toolbar',
         'mock',
         'pycodestyle>=2.7.0',
