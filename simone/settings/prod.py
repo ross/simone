@@ -4,6 +4,8 @@ DEBUG = False
 
 STATIC_ROOT = './static'
 
+CSRF_TRUSTED_ORIGINS = ['https://simone.xormedia.com']
+
 DATABASES = {
     'default': {
         'ENGINE': 'mysql.connector.django',
