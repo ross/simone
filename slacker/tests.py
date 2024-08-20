@@ -24,7 +24,7 @@ class TestSlackContext(TestCase):
             timestamp='1633815504.005800',
             bot_user_id='U01V6PW6XDE',
         )
-        self.assertEquals(ChannelType.PUBLIC, context.channel_type)
+        self.assertEqual(ChannelType.PUBLIC, context.channel_type)
 
         private_channel = Channel.objects.create(
             id='C01UTGR299A',
@@ -38,7 +38,7 @@ class TestSlackContext(TestCase):
             timestamp='1633816328.000200',
             bot_user_id='U01V6PW6XDE',
         )
-        self.assertEquals(ChannelType.PRIVATE, context.channel_type)
+        self.assertEqual(ChannelType.PRIVATE, context.channel_type)
 
 
 class TestSlackListener(TestCase):
@@ -502,9 +502,9 @@ class TestSlackListener(TestCase):
             inviter='U01GQ7UFKFX',
         )
         public_channel = Channel.objects.get(id='C01GTHYEU4B')
-        self.assertEquals('C01GTHYEU4B', public_channel.id)
-        self.assertEquals('bot-dev', public_channel.name)
-        self.assertEquals(Channel.Type.PUBLIC, public_channel.channel_type)
+        self.assertEqual('C01GTHYEU4B', public_channel.id)
+        self.assertEqual('bot-dev', public_channel.name)
+        self.assertEqual(Channel.Type.PUBLIC, public_channel.channel_type)
 
         # bot removed from public channel
         message = {
@@ -988,7 +988,7 @@ class TestSlackListener(TestCase):
         # check that it now exists
         channel = Channel.objects.get(id='C02JNLHRQ3W')
         # and has the expected name
-        self.assertEquals('bot-dev-rename-2', channel.name)
+        self.assertEqual('bot-dev-rename-2', channel.name)
 
         # Another rename of the same channel
         event = {
@@ -1006,4 +1006,4 @@ class TestSlackListener(TestCase):
         listener.channel_rename(event)
         # reload our object and see if the name changed
         channel.refresh_from_db()
-        self.assertEquals('bot-dev-rename', channel.name)
+        self.assertEqual('bot-dev-rename', channel.name)
