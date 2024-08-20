@@ -10,7 +10,7 @@ holidays==0.53
 idna==3.7
 joblib==1.4.2
 mysql-connector-python==8.0.28
-nltk==3.8.1
+nltk==3.9
 packaging==24.1
 protobuf==5.27.2
 pylev==1.4.0
