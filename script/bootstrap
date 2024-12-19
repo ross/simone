@@ -12,7 +12,7 @@ fi
 
 pip install -U pip
 pip install -r requirements.txt -r requirements-dev.txt
-python -m nltk.downloader punkt
+python -m nltk.downloader punkt_tab
 
 if [ ! -L ".git/hooks/pre-commit" ]; then
     ln -s "$(pwd)/.git_hooks_pre-commit" ".git/hooks/pre-commit"
