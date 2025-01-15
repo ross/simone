@@ -215,6 +215,8 @@ class Stonks(object):
             self.log.debug('command: trying all')
             open_value, last_value, change = self.lookup(text)
 
+        # TODO: handle unknown/None values
+
         change_pct = round(100 * (change / open_value), 2)
 
         if command == 'stonks':
