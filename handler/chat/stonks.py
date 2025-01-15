@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger
 from os import environ
 
@@ -80,31 +81,16 @@ class Stonks(object):
     }
 
     def __init__(
-        self,
-        iex_base_url,
-        iex_api_token,
-        wsj_quotes_ckey,
-        wsj_quotes_entitlement_token,
+        self, alpha_vantage_key, wsj_quotes_ckey, wsj_quotes_entitlement_token
     ):
-        self.iex_api_token = iex_api_token
-        self.iex_base_url = iex_base_url
+        self.alpha_vantage_key = alpha_vantage_key
         self.wsj_quotes_ckey = wsj_quotes_ckey
         self.wsj_quotes_entitlement_token = wsj_quotes_entitlement_token
 
+        self._executor = ThreadPoolExecutor()
+
     def config(self):
         return {'commands': ('stocks', 'stonks')}
-
-    def lookup_iex(self, text):
-        url = f'{self.iex_base_url}/{text}/quote'
-        resp = session.get(url, params={'token': self.iex_api_token})
-        if resp.status_code != 200:
-            return (None, None, None)
-        data = resp.json()
-        # open is not present outside of market hours so fall back to close
-        open_value = data['open'] or data['previousClose']
-        last_value = data['latestPrice']
-        change = data['change']
-        return (open_value, last_value, change)
 
     def lookup_wsj(self, text):
         text = text.replace('-', '.')
@@ -148,6 +134,46 @@ class Stonks(object):
 
         return (None, None, None)
 
+    def lookup_crypto(self, text):
+        url = 'https://www.alphavantage.co/query'
+        params = {
+            'function': 'DIGITAL_CURRENCY_DAILY',
+            'symbol': text,
+            'market': 'USD',
+            'apikey': self.alpha_vantage_key,
+        }
+        resp = session.get(url, params=params)
+        if resp.status_code != 200:
+            self.log.error(
+                'lookup_crypto: request failed, code=%d, content=%s',
+                resp.status_code,
+                resp.content,
+            )
+            return (None, None, None)
+        data = resp.json()
+        error = data.get('Error Message', None)
+        if error:
+            self.log.debug('lookup_crypto: error=%s', error)
+            return (None, None, None)
+        data = data['Time Series (Digital Currency Daily)']
+        dates = data.keys()
+        dates = sorted(dates, reverse=True)
+        # most recent
+        latest = data[dates[0]]
+        open_value = float(latest['1. open'])
+        last_value = float(latest['4. close'])
+        return (open_value, last_value, last_value - open_value)
+
+    def lookup(self, text):
+        wsj = self._executor.submit(self.lookup_wsj, text)
+        crypto = self._executor.submit(self.lookup_crypto, text)
+        for future in as_completed((wsj, crypto)):
+            open_value, last_value, change = future.result()
+            if open_value is not None:
+                return (open_value, last_value, change)
+        # nobody had an answer
+        return (None, None, None)
+
     def stonks(self, context, text, open_value, last_value, change, change_pct):
         if open_value is None:
             context.say(
@@ -186,11 +212,10 @@ class Stonks(object):
             self.log.debug('command: wsj specific')
             open_value, last_value, change = self.lookup_wsj(text)
         else:
-            self.log.debug('command: trying iex')
-            open_value, last_value, change = self.lookup_iex(text)
-            if open_value is None:
-                self.log.debug('command: no luck w/iex, trying wsj')
-                open_value, last_value, change = self.lookup_wsj(text)
+            self.log.debug('command: trying all')
+            open_value, last_value, change = self.lookup(text)
+
+        # TODO: handle unknown/None values
 
         change_pct = round(100 * (change / open_value), 2)
 
@@ -204,19 +229,10 @@ class Stonks(object):
             )
 
 
-if environ.get('IEX_SANDBOX', False):
-    iex_base_url = 'https://sandbox.iexapis.com/stable/stock'
-else:
-    iex_base_url = 'https://cloud.iexapis.com/stable/stock'
-iex_api_token = environ['IEX_API_TOKEN']
+alpha_vantage_key = environ['ALPHA_VANTAGE_KEY']
 wsj_quotes_ckey = environ['WSJ_QUOTES_CKEY']
 wsj_quotes_entitlement_token = environ['WSJ_QUOTES_ENTITLEMENT_TOKEN']
 
 Registry.register_handler(
-    Stonks(
-        iex_base_url,
-        iex_api_token,
-        wsj_quotes_ckey,
-        wsj_quotes_entitlement_token,
-    )
+    Stonks(alpha_vantage_key, wsj_quotes_ckey, wsj_quotes_entitlement_token)
 )
