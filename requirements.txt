@@ -20,7 +20,7 @@ requests==2.32.4
 six==1.17.0
 slack_bolt==1.23.0
 slack_sdk==3.35.0
-sqlparse==0.5.3
+sqlparse==0.5.4
 tqdm==4.67.1
 urllib3==2.6.3
 word2number==1.1
