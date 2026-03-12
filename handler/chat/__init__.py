@@ -16,7 +16,6 @@ from .trash_talk import TrashTalk
 from .wave import Wave
 from .weather import Weather
 
-
 # Quell warnings
 Registry
 session

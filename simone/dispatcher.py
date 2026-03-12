@@ -15,7 +15,6 @@ from threading import Event, Thread
 
 from slacker.listeners import SlackListener
 
-
 max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
 executor = ThreadPoolExecutor(
     max_workers=max_dispatchers, thread_name_prefix='simone-worker'
