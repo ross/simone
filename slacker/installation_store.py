@@ -108,15 +108,17 @@ class DjangoInstallationStore(InstallationStore):
             bot_scopes=bot.bot_scopes,
             installed_at=bot.installed_at,
             # No user token in this bot-only install flow.
-            user_id=user_id or bot.bot_user_id,
+            user_id=user_id,
         )
 
     def delete_bot(
         self, *, enterprise_id: Optional[str], team_id: Optional[str]
     ):
         Workspace = self._model()
-        deleted, _ = Workspace.objects.filter(team_id=team_id).delete()
-        log.info('delete_bot: team_id=%s, deleted=%d', team_id, deleted)
+        _, deleted_by_model = Workspace.objects.filter(team_id=team_id).delete()
+        log.info(
+            'delete_bot: team_id=%s, deleted=%s', team_id, deleted_by_model
+        )
 
     def delete_installation(
         self,
