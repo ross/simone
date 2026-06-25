@@ -46,7 +46,7 @@ class About(object):
             ]
             if not facts:
                 context.say(
-                    f"I don't know anything about {user_mention}, why don't you tell me somehting"
+                    f"I don't know anything about {user_mention}, why don't you tell me something"
                 )
                 return
             facts = ', '.join(facts)
@@ -73,7 +73,7 @@ class About(object):
                 workspace=context.workspace, user_id=user_id, value=text
             )
             if not created:
-                context.say(f'I alredy know {user_mention} is `{text}`')
+                context.say(f'I already know {user_mention} is `{text}`')
                 return
             context.say(f'OK. {user_mention} is `{text}`')
 
