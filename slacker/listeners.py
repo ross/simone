@@ -109,10 +109,18 @@ class SlackListener(object):
         handler = SlackRequestHandler(app=self.app)
 
         @csrf_exempt
-        def slack_events_handler(request: HttpRequest):
+        def slack_handler(request: HttpRequest):
             return handler.handle(request)
 
-        return [path("slack/events", slack_events_handler, name="slack_events")]
+        return [
+            path("slack/events", slack_handler, name="slack_events"),
+            path("slack/install", slack_handler, name="slack_install"),
+            path(
+                "slack/oauth_redirect",
+                slack_handler,
+                name="slack_oauth_redirect",
+            ),
+        ]
 
     def channel(self, channel_name):
         try:
