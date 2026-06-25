@@ -11,6 +11,7 @@ from pprint import pformat, pprint
 from pylev import levenshtein
 from slack_bolt import App
 from slack_bolt.oauth.oauth_settings import OAuthSettings
+from slack_sdk import WebClient
 from slack_sdk.oauth.state_store import FileOAuthStateStore
 from time import time
 from threading import Event, Thread
@@ -329,6 +330,8 @@ class Dispatcher(object):
         return cron
 
     def tick(self, now):
+        from slacker.models import Workspace
+
         self.log.debug('tick: ')
         # we've validated things during init so we can just use them here
         for cron, handler in self.crons:
@@ -337,18 +340,28 @@ class Dispatcher(object):
                 # not time
                 continue
             listener = self.listeners[cron['listener']]
-            channel = listener.channel(cron['channel'])
-            # we do need to check for channel here as we don't require them to
-            # exist at __init__ time in case we later learn about them
-            if not channel:
-                self.log.warning(
-                    'tick: unrecognized channel=%s, listener=%s',
-                    channel,
-                    listener,
+            # Fire once per workspace that has the named channel.
+            for workspace in Workspace.objects.all():
+                channel = listener.channel(cron['channel'], workspace=workspace)
+                # we do need to check for channel here as we don't require them
+                # to exist at __init__ time in case we later learn about them
+                if not channel:
+                    self.log.debug(
+                        'tick: channel=%s not found for workspace=%s',
+                        cron['channel'],
+                        workspace,
+                    )
+                    continue
+                # Build a per-workspace client from the stored bot token (cron
+                # runs outside a Bolt request, so there is no injected client).
+                client = WebClient(token=workspace.bot_token)
+                context = listener.context(
+                    client=client,
+                    workspace=workspace,
+                    bot_user_id=workspace.bot_user_id,
+                    channel=channel,
                 )
-                continue
-            context = listener.context(channel=channel)
-            handler.cron(context, cron=cron, dispatcher=self)
+                handler.cron(context, cron=cron, dispatcher=self)
 
 
 class Cron(Thread):
