@@ -200,10 +200,12 @@ class SlackListener(object):
 
     def channel_rename(self, event, client, bolt_context):
         self.log.debug('channel_rename: event=%s', event)
+        team_id = bolt_context.get('team_id')
+        workspace = self._get_workspace(team_id) if team_id else None
         params = self._channel_params(event['channel'])
         channel_id = params.pop('id')
         channel, _ = Channel.objects.update_or_create(
-            id=channel_id, defaults=params
+            id=channel_id, defaults={**params, 'workspace': workspace}
         )
 
     def message(self, event, client, bolt_context):

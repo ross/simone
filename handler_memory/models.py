@@ -2,13 +2,7 @@ from django.db import models
 
 
 class Item(models.Model):
-    workspace = models.ForeignKey(
-        'slacker.Workspace',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    workspace = models.ForeignKey('slacker.Workspace', on_delete=models.CASCADE)
     key = models.CharField(max_length=255)
     value = models.TextField()
 

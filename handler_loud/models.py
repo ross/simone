@@ -2,13 +2,7 @@ from django.db import models
 
 
 class Shout(models.Model):
-    workspace = models.ForeignKey(
-        'slacker.Workspace',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    workspace = models.ForeignKey('slacker.Workspace', on_delete=models.CASCADE)
     text = models.CharField(max_length=255)
 
     updated_at = models.DateTimeField(auto_now=True)

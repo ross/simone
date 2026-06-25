@@ -2,13 +2,7 @@ from django.db import models
 
 
 class Fact(models.Model):
-    workspace = models.ForeignKey(
-        'slacker.Workspace',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    workspace = models.ForeignKey('slacker.Workspace', on_delete=models.CASCADE)
     user_id = models.CharField(max_length=32)
     value = models.CharField(max_length=255)
 

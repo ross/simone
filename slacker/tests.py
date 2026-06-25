@@ -38,9 +38,13 @@ def make_workspace(
 
 class TestSlackContext(TestCase):
     def test_channel_types(self):
+        ws = make_workspace()
         client = MagicMock()
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            workspace=ws,
         )
         context = SlackContext(
             client=client,
@@ -55,6 +59,7 @@ class TestSlackContext(TestCase):
             id='C01UTGR299A',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
+            workspace=ws,
         )
         context = SlackContext(
             client=client,
@@ -90,12 +95,16 @@ class TestSlackListener(TestCase):
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            workspace=self.workspace,
         )
         private_channel = Channel.objects.create(
             id='C01UTGR299A',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
+            workspace=self.workspace,
         )
 
         # message from a user in a public channel
@@ -675,7 +684,10 @@ class TestSlackListener(TestCase):
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            workspace=self.workspace,
         )
 
         # message in public channel front-@ mentioning bot
@@ -865,7 +877,10 @@ class TestSlackListener(TestCase):
         listener = SlackListener(dispatcher=dispatcher, app=app)
 
         public_channel = Channel.objects.create(
-            id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            workspace=self.workspace,
         )
 
         # message with a link to a channel

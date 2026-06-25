@@ -2,13 +2,7 @@ from django.db import models
 
 
 class User(models.Model):
-    workspace = models.ForeignKey(
-        'slacker.Workspace',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        default=None,
-    )
+    workspace = models.ForeignKey('slacker.Workspace', on_delete=models.CASCADE)
     user_id = models.CharField(max_length=16)
     sparkles = models.IntegerField(default=0, db_index=True)
 
