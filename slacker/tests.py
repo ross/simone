@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from mock import MagicMock, patch
 from django.test import TestCase
 
 from simone.context import ChannelType
-from .models import Channel
+from .models import Channel, Workspace
 from .listeners import SenderType, SlackContext, SlackListener
 
 
@@ -12,13 +13,37 @@ class DummyApp(object):
         return lambda _: None
 
 
+# Bolt injects a BoltContext dict-like object; for tests a plain dict works.
+def bolt_context(team_id='T01GZF7DHKN', bot_user_id='U01V6PW6XDE'):
+    return {'team_id': team_id, 'bot_user_id': bot_user_id}
+
+
+def make_workspace(
+    team_id='T01GZF7DHKN',
+    bot_user_id='U01V6PW6XDE',
+    bot_token='xoxb-test',
+    bot_id='B01TEST',
+):
+    return Workspace.objects.get_or_create(
+        team_id=team_id,
+        defaults={
+            'team_name': 'Test Workspace',
+            'bot_token': bot_token,
+            'bot_id': bot_id,
+            'bot_user_id': bot_user_id,
+            'installed_at': datetime(2021, 10, 10, tzinfo=timezone.utc),
+        },
+    )[0]
+
+
 class TestSlackContext(TestCase):
     def test_channel_types(self):
+        client = MagicMock()
         public_channel = Channel.objects.create(
             id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
         )
         context = SlackContext(
-            app=None,
+            client=client,
             channel=public_channel,
             thread=None,
             timestamp='1633815504.005800',
@@ -32,7 +57,7 @@ class TestSlackContext(TestCase):
             channel_type=Channel.Type.PRIVATE,
         )
         context = SlackContext(
-            app=None,
+            client=client,
             channel=private_channel,
             thread=None,
             timestamp='1633816328.000200',
@@ -42,12 +67,27 @@ class TestSlackContext(TestCase):
 
 
 class TestSlackListener(TestCase):
+    def setUp(self):
+        self.workspace = make_workspace()
+        self.client = MagicMock()
+        self.bolt_ctx = bolt_context()
+
+    def _ctx(self, channel, thread=None, timestamp=None):
+        '''Build a SlackContext the same way the listener does, for assert comparisons.'''
+        return SlackContext(
+            client=self.client,
+            channel=channel,
+            thread=thread,
+            timestamp=timestamp,
+            bot_user_id=self.workspace.bot_user_id,
+            workspace=self.workspace,
+        )
+
     def test_messages(self):
         app = DummyApp()
         dispatcher = MagicMock()
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
-        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         public_channel = Channel.objects.create(
             id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
@@ -83,15 +123,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633815504.005800',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633815504.005800'),
             text='testing',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -127,14 +163,14 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
+            context=self._ctx(
+                public_channel,
                 thread='1633815504.005800',
                 timestamp='1633815602.006000',
-                bot_user_id='U01V6PW6XDE',
             ),
             text='in a thread',
             sender='U01GQ7UFKFX',
@@ -154,15 +190,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633888275.007000',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633888275.007000'),
             text='blah blah blah',
             sender='B01GTBL1MJN',
             sender_type=SenderType.BOT,
@@ -194,15 +226,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'group',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=private_channel,
-                thread=None,
-                timestamp='1633816328.000200',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(private_channel, timestamp='1633816328.000200'),
             text='boo',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -236,15 +264,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633912633.008700',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633912633.008700'),
             text='this will be edited',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -312,16 +336,12 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_not_called()
         dispatcher.edit.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633912640.008800',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633912640.008800'),
             text='this was edited',
             previous_text='this will be edited',
             sender='U01GQ7UFKFX',
@@ -362,14 +382,14 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
+            context=self._ctx(
+                public_channel,
                 thread='1633912633.008700',
                 timestamp='1633981229.008900',
-                bot_user_id='U01V6PW6XDE',
             ),
             text='this thread message will be edited',
             sender='U01GQ7UFKFX',
@@ -444,16 +464,12 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_not_called()
         dispatcher.edit.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633981255.009100',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633981255.009100'),
             text='this thread message was edited',
             previous_text='this thread message will be edited',
             sender='U01GQ7UFKFX',
@@ -468,8 +484,6 @@ class TestSlackListener(TestCase):
         dispatcher = MagicMock()
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
-
-        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         ephemeral_channel = Channel(
             id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
@@ -490,15 +504,14 @@ class TestSlackListener(TestCase):
             {'id': 'C01GTHYEU4B', 'name': 'bot-dev', 'is_channel': True}
         ]
         dispatcher.reset_mock()
-        listener.member_joined_channel(member_joined_channel)
-        channel_info_mock.assert_called_once_with('C01GTHYEU4B')
+        listener.member_joined_channel(
+            member_joined_channel,
+            client=self.client,
+            bolt_context=self.bolt_ctx,
+        )
+        channel_info_mock.assert_called_once_with(self.client, 'C01GTHYEU4B')
         dispatcher.added.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=ephemeral_channel,
-                timestamp='1633815284.005500',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(ephemeral_channel, timestamp='1633815284.005500'),
             inviter='U01GQ7UFKFX',
         )
         public_channel = Channel.objects.get(id='C01GTHYEU4B')
@@ -530,15 +543,11 @@ class TestSlackListener(TestCase):
             }
         ]
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.removed.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                # we should get back our recorded channel from above
-                channel=public_channel,
-                timestamp='1633814854.000100',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633814854.000100'),
             remover='U01GQ7UFKFX',
         )
 
@@ -568,14 +577,13 @@ class TestSlackListener(TestCase):
             }
         ]
         dispatcher.reset_mock()
-        listener.member_joined_channel(member_joined_channel)
+        listener.member_joined_channel(
+            member_joined_channel,
+            client=self.client,
+            bolt_context=self.bolt_ctx,
+        )
         dispatcher.added.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=private_channel,
-                timestamp='1633816538.000800',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(private_channel, timestamp='1633816538.000800'),
             inviter='U01GQ7UFKFX',
         )
 
@@ -592,14 +600,11 @@ class TestSlackListener(TestCase):
         }
         channel_info_mock.reset_mock()
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.removed.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=private_channel,
-                timestamp='1633816442.000100',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(private_channel, timestamp='1633816442.000100'),
             remover='U01GQ7UFKFX',
         )
 
@@ -624,15 +629,16 @@ class TestSlackListener(TestCase):
         }
         channel_info_mock.reset_mock()
         dispatcher.reset_mock()
-        listener.message(message)
-        listener.member_joined_channel(member_joined_channel)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
+        listener.member_joined_channel(
+            member_joined_channel,
+            client=self.client,
+            bolt_context=self.bolt_ctx,
+        )
         dispatcher.joined.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                timestamp='1633815843.006500',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633815843.006500'),
             joiner='U01GQ7UFKFX',
             # TODO: what about when invited
             inviter=None,
@@ -650,14 +656,11 @@ class TestSlackListener(TestCase):
         }
         channel_info_mock.reset_mock()
         dispatcher.reset_mock()
-        listener.member_left_channel(member_left_channel)
+        listener.member_left_channel(
+            member_left_channel, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.left.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                timestamp='1633815668.006400',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633815668.006400'),
             leaver='U01GQ7UFKFX',
             # TODO: what about when kicked by someone
             kicker=None,
@@ -701,18 +704,13 @@ class TestSlackListener(TestCase):
             'event_ts': '1633911893.007300',
             'channel_type': 'channel',
         }
-        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_not_called()
         dispatcher.command.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633911893.007300',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633911893.007300'),
             text='hi there',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -744,15 +742,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.command.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633911893.007300',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633911893.007300'),
             text='hi there',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -790,14 +784,14 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.command.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
+            context=self._ctx(
+                public_channel,
                 thread='1633912633.008700',
                 timestamp='1633990282.009400',
-                bot_user_id='U01V6PW6XDE',
             ),
             text=' command in thread',
             sender='U01GQ7UFKFX',
@@ -838,16 +832,12 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.command.assert_not_called()
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633912018.007600',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633912018.007600'),
             text='hello <@U01V6PW6XDE> and <@U01V6PW6XDF> blah blah',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -855,12 +845,15 @@ class TestSlackListener(TestCase):
         )
 
         # message in public channel with front-@ mention that doesn't match our
-        # bot
-        listener._auth_info = {'user_id': 'U01GQ7UFKFX'}
-        listener._bot_mention = None
+        # bot — simulate by using a different bot_user_id in bolt_context
+        other_bolt_ctx = bolt_context(
+            team_id='T01GZF7DHKN', bot_user_id='U01GQ7UFKFX'
+        )
         dispatcher.reset_mock()
         # reusing previous message
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=other_bolt_ctx
+        )
         dispatcher.command.assert_not_called()
         dispatcher.message.assert_called_once()
 
@@ -869,7 +862,6 @@ class TestSlackListener(TestCase):
         dispatcher = MagicMock()
         dispatcher.LEADER = '.'
         listener = SlackListener(dispatcher=dispatcher, app=app)
-        listener._auth_info = {'user_id': 'U01V6PW6XDE'}
 
         public_channel = Channel.objects.create(
             id='C01GTHYEU4B', name='bot-dev', channel_type=Channel.Type.PUBLIC
@@ -909,15 +901,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633912278.007800',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633912278.007800'),
             text='you should check out <#C01JLBRLZ7X|greetings>',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -952,15 +940,11 @@ class TestSlackListener(TestCase):
             'channel_type': 'channel',
         }
         dispatcher.reset_mock()
-        listener.message(message)
+        listener.message(
+            message, client=self.client, bolt_context=self.bolt_ctx
+        )
         dispatcher.message.assert_called_once_with(
-            context=SlackContext(
-                app=app,
-                channel=public_channel,
-                thread=None,
-                timestamp='1633912414.008200',
-                bot_user_id='U01V6PW6XDE',
-            ),
+            context=self._ctx(public_channel, timestamp='1633912414.008200'),
             text='hello there <@U01JBS2C6E9>',
             sender='U01GQ7UFKFX',
             sender_type=SenderType.USER,
@@ -970,6 +954,8 @@ class TestSlackListener(TestCase):
     def test_channel_rename(self):
         app = DummyApp()
         listener = SlackListener(dispatcher=None, app=app)
+        dummy_client = MagicMock()
+        dummy_bolt_ctx = bolt_context()
 
         # create a channel we've never seen before
         event = {
@@ -984,7 +970,9 @@ class TestSlackListener(TestCase):
             },
             'event_ts': '1634828547.000900',
         }
-        listener.channel_rename(event)
+        listener.channel_rename(
+            event, client=dummy_client, bolt_context=dummy_bolt_ctx
+        )
         # check that it now exists
         channel = Channel.objects.get(id='C02JNLHRQ3W')
         # and has the expected name
@@ -1003,7 +991,9 @@ class TestSlackListener(TestCase):
             },
             'event_ts': '1634828547.000900',
         }
-        listener.channel_rename(event)
+        listener.channel_rename(
+            event, client=dummy_client, bolt_context=dummy_bolt_ctx
+        )
         # reload our object and see if the name changed
         channel.refresh_from_db()
         self.assertEqual('bot-dev-rename', channel.name)
