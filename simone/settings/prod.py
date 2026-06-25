@@ -40,3 +40,13 @@ LOGGING = {
 }
 
 RESPONDER_COOLDOWN = 3600
+
+# OAuth state files (10-min CSRF tokens during /slack/install flow).
+# Container-local is fine; losing them on restart just means in-flight
+# install attempts get a CSRF error and the user retries.
+SLACK_STATE_DIR = '/app/slack_state'
+
+# OAuth state files (10-min CSRF tokens during /slack/install flow).
+# Container-local is fine; losing them on restart just means any in-flight
+# install attempts get a CSRF error and the user retries.
+SLACK_STATE_DIR = '/app/slack_state'

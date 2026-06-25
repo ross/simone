@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.http import HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import path
@@ -123,16 +124,8 @@ class SlackListener(object):
         ]
 
     def channel(self, channel_name, workspace=None):
-        '''
-        Look up a Channel by name scoped to a workspace.
-        workspace=None falls back to a global lookup (legacy / pre-backfill).
-        '''
         try:
-            if workspace is not None:
-                return Channel.objects.get(
-                    workspace=workspace, name=channel_name
-                )
-            return Channel.objects.get(name=channel_name)
+            return Channel.objects.get(workspace=workspace, name=channel_name)
         except Channel.DoesNotExist:
             return None
 
@@ -194,14 +187,20 @@ class SlackListener(object):
             return Channel.objects.get(id=channel_id)
         except Channel.DoesNotExist:
             pass
-        channel = self._channel_info(client, channel_id)
-        params = self._channel_params(channel)
-        return Channel.objects.create(workspace=workspace, **params)
+        channel_data = self._channel_info(client, channel_id)
+        params = self._channel_params(channel_data)
+        try:
+            return Channel.objects.create(workspace=workspace, **params)
+        except IntegrityError:
+            # Concurrent event created the same channel between our get and create.
+            return Channel.objects.get(id=channel_id)
 
     def channel_rename(self, event, client, bolt_context):
         self.log.debug('channel_rename: event=%s', event)
         team_id = bolt_context.get('team_id')
         workspace = self._get_workspace(team_id) if team_id else None
+        if workspace is None:
+            return
         params = self._channel_params(event['channel'])
         channel_id = params.pop('id')
         channel, _ = Channel.objects.update_or_create(

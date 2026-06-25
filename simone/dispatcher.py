@@ -312,13 +312,6 @@ class Dispatcher(object):
         if not channel_name:
             self.log.warning('validate_cron: missing channel, cron=%s', cron)
             return None
-        channel = listener.channel(channel_name)
-        if not channel:
-            self.log.warning(
-                'validate: unrecognized channel=%s, listener=%s, keeping cron in case we later learn about it ',
-                channel_name,
-                listener,
-            )
         when = cron.get('when', None)
         if not when:
             self.log.warning('validate_cron: missing when, cron=%s', cron)

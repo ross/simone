@@ -19,9 +19,29 @@ from django.db import migrations
 def backfill(apps, schema_editor):
     token = environ.get('SLACK_BOT_TOKEN', '')
     if not token:
+        # Check whether any existing rows need backfilling.
+        needs_backfill = any(
+            apps.get_model(*label)
+            .objects.filter(workspace__isnull=True)
+            .exists()
+            for label in [
+                ('slacker', 'Channel'),
+                ('handler_about', 'Fact'),
+                ('handler_loud', 'Shout'),
+                ('handler_memory', 'Item'),
+                ('handler_responder', 'Trigger'),
+                ('handler_sparkles', 'User'),
+            ]
+        )
+        if needs_backfill:
+            raise RuntimeError(
+                '\n\n  [backfill_workspace] SLACK_BOT_TOKEN is not set but the database '
+                'has existing rows that need a workspace assigned.\n'
+                '  Re-run migrate with SLACK_BOT_TOKEN=<your-token> in the environment.'
+            )
         print(
-            '\n  [backfill_workspace] SLACK_BOT_TOKEN not set; skipping backfill. '
-            'Run with SLACK_BOT_TOKEN=<your-token> to backfill existing data.'
+            '\n  [backfill_workspace] SLACK_BOT_TOKEN not set; '
+            'skipping backfill (empty database).'
         )
         return
 
