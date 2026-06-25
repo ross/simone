@@ -3,6 +3,33 @@ from django.db import models
 from simone.context import ChannelType
 
 
+class Workspace(models.Model):
+    '''
+    A Slack workspace (team) that has installed Simone.  The primary key is the
+    Slack team_id (e.g. "T01GZF7DHKN") which is stable and globally unique.
+    Populated via the OAuth installation flow; the installation_store bridges
+    between slack_bolt's Installation/Bot objects and this model.
+    '''
+
+    team_id = models.CharField(max_length=32, primary_key=True)
+    team_name = models.CharField(max_length=255)
+    enterprise_id = models.CharField(
+        max_length=32, null=True, blank=True, default=None
+    )
+    bot_token = models.CharField(max_length=255)
+    bot_id = models.CharField(max_length=32)
+    bot_user_id = models.CharField(max_length=32)
+    # Comma-separated list of granted bot scopes
+    bot_scopes = models.TextField(default='')
+
+    installed_at = models.DateTimeField()
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Workspace({self.team_id}, {self.team_name})'
+
+
 class Channel(models.Model):
     '''
     https://api.slack.com/methods/conversations.info
