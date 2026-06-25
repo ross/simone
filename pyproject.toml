@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
+
+[project]
+name = "simone"
+version = "0.0.1"
+dependencies = [
+    "Django>=4.0.8,<5.0",
+    "cron-validator>=1.0.3",
+    "gunicorn>=20.1.0",
+    "holidays>=0.11.3.1",
+    "mysql-connector-python>=9.1.0",
+    "nltk>=3.6.6",
+    "pylev>=1.4.0",
+    "requests>=2.26.0",
+    "slack-bolt>=1.10.0",
+    "word2number>=1.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=26.3.0,<27.0.0",
+    "django-debug-toolbar",
+    "mock",
+    "proviso",
+    "pycodestyle>=2.7.0",
+    "pyflakes>=2.3.1",
+]
