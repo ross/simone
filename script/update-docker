@@ -38,6 +38,8 @@ docker run -d --restart=unless-stopped --name simone -p $PORT:6444 \
     -e SIMONE_DB_PASSWORD \
     -e SIMONE_DB_USER \
     -e SLACK_BOT_TOKEN \
+    -e SLACK_CLIENT_ID \
+    -e SLACK_CLIENT_SECRET \
     -e SLACK_SIGNING_SECRET \
     -e WSJ_QUOTES_CKEY \
     -e WSJ_QUOTES_ENTITLEMENT_TOKEN \

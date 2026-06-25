@@ -8,6 +8,8 @@ features:
     display_name: simone
     always_online: true
 oauth_config:
+  redirect_urls:
+    - https://simone.xormedia.com/slack/oauth_redirect
   scopes:
     bot:
       - channels:history
