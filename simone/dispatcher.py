@@ -6,13 +6,16 @@ from django.db import close_old_connections, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
-from os import environ
+from os import environ, path
 from pprint import pformat, pprint
 from pylev import levenshtein
 from slack_bolt import App
+from slack_bolt.oauth.oauth_settings import OAuthSettings
+from slack_sdk.oauth.state_store import FileOAuthStateStore
 from time import time
 from threading import Event, Thread
 
+from slacker.installation_store import DjangoInstallationStore
 from slacker.listeners import SlackListener
 
 max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
@@ -75,14 +78,41 @@ class Dispatcher(object):
     def __init__(self, handlers):
         self.handlers = handlers
 
-        token_verification = getattr(
-            settings, 'SLACK_TOKEN_VERIFICATION', False
+        # OAuth state files live in <BASE_DIR>/slack_state/ by default; can be
+        # overridden via SLACK_STATE_DIR in Django settings.
+        state_dir = getattr(
+            settings,
+            'SLACK_STATE_DIR',
+            path.join(settings.BASE_DIR, 'slack_state'),
         )
+
+        oauth_settings = OAuthSettings(
+            client_id=environ['SLACK_CLIENT_ID'],
+            client_secret=environ['SLACK_CLIENT_SECRET'],
+            scopes=[
+                'channels:history',
+                'channels:read',
+                'chat:write',
+                'groups:history',
+                'groups:read',
+                'groups:write',
+                'im:history',
+                'im:read',
+                'im:write',
+                'reactions:write',
+            ],
+            installation_store=DjangoInstallationStore(),
+            state_store=FileOAuthStateStore(
+                expiration_seconds=600, base_dir=state_dir
+            ),
+            install_path='/slack/install',
+            redirect_uri_path='/slack/oauth_redirect',
+        )
+
         app = App(
             name='simone',
-            token=environ["SLACK_BOT_TOKEN"],
-            signing_secret=environ["SLACK_SIGNING_SECRET"],
-            token_verification_enabled=token_verification,
+            signing_secret=environ['SLACK_SIGNING_SECRET'],
+            oauth_settings=oauth_settings,
             listener_executor=executor,
         )
         self.listeners = {'slack': SlackListener(self, app)}
