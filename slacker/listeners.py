@@ -124,11 +124,14 @@ class SlackListener(object):
 
     def channel(self, channel_name, workspace=None):
         '''
-        Look up a Channel by name, optionally scoped to a workspace.
-        workspace scoping is enforced after step 6 adds the FK; for now
-        the lookup is global (correct for single-workspace cron use in step 7).
+        Look up a Channel by name scoped to a workspace.
+        workspace=None falls back to a global lookup (legacy / pre-backfill).
         '''
         try:
+            if workspace is not None:
+                return Channel.objects.get(
+                    workspace=workspace, name=channel_name
+                )
             return Channel.objects.get(name=channel_name)
         except Channel.DoesNotExist:
             return None
@@ -186,14 +189,14 @@ class SlackListener(object):
         resp = client.conversations_info(channel=channel_id)
         return resp.data['channel']
 
-    def _get_or_create_channel(self, client, channel_id):
+    def _get_or_create_channel(self, client, channel_id, workspace=None):
         try:
             return Channel.objects.get(id=channel_id)
         except Channel.DoesNotExist:
             pass
         channel = self._channel_info(client, channel_id)
         params = self._channel_params(channel)
-        return Channel.objects.create(**params)
+        return Channel.objects.create(workspace=workspace, **params)
 
     def channel_rename(self, event, client, bolt_context):
         self.log.debug('channel_rename: event=%s', event)
@@ -242,7 +245,7 @@ class SlackListener(object):
             )
             return
 
-        channel = self._get_or_create_channel(client, channel_id)
+        channel = self._get_or_create_channel(client, channel_id, workspace)
         text = message['text']
 
         thread = event.get('thread_ts', None)
@@ -267,7 +270,9 @@ class SlackListener(object):
                     user,
                 )
                 try:
-                    removed_from = Channel.objects.get(name=channel_name)
+                    removed_from = Channel.objects.get(
+                        workspace=workspace, name=channel_name
+                    )
                 except Channel.DoesNotExist:
                     self.log.warn(
                         'message: removed from channel (%s) we do not recognize',
@@ -384,7 +389,7 @@ class SlackListener(object):
         bot_user_id = bolt_context['bot_user_id']
         inviter = event.get('inviter', None)
         channel = event['channel']
-        channel = self._get_or_create_channel(client, channel)
+        channel = self._get_or_create_channel(client, channel, workspace)
         joiner = event['user']
         event_ts = event['event_ts']
         if joiner == bot_user_id:
@@ -420,7 +425,7 @@ class SlackListener(object):
         bot_user_id = bolt_context['bot_user_id']
         kicker = event.get('inviter', None)
         channel = event['channel']
-        channel = self._get_or_create_channel(client, channel)
+        channel = self._get_or_create_channel(client, channel, workspace)
         leaver = event['user']
         event_ts = event['event_ts']
         self.dispatcher.left(

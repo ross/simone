@@ -38,7 +38,12 @@ class About(object):
             # just use the first mention
             user_id = mentions[0]
             user_mention = context.user_mention(user_id)
-            facts = [f.value for f in Fact.objects.filter(user_id=user_id)]
+            facts = [
+                f.value
+                for f in Fact.objects.filter(
+                    workspace=context.workspace, user_id=user_id
+                )
+            ]
             if not facts:
                 context.say(
                     f"I don't know anything about {user_mention}, why don't you tell me somehting"
@@ -51,7 +56,9 @@ class About(object):
             user_id = mentions[0]
             user_mention = context.user_mention(user_id)
             try:
-                fact = Fact.objects.get(user_id=user_id, value=text)
+                fact = Fact.objects.get(
+                    workspace=context.workspace, user_id=user_id, value=text
+                )
                 fact.delete()
                 context.say(f"OK. I've forgotten `{text}` about {user_mention}")
             except Fact.DoesNotExist:
@@ -63,7 +70,7 @@ class About(object):
             user_id = mentions[0]
             user_mention = context.user_mention(user_id)
             fact, created = Fact.objects.get_or_create(
-                user_id=user_id, value=text
+                workspace=context.workspace, user_id=user_id, value=text
             )
             if not created:
                 context.say(f'I alredy know {user_mention} is `{text}`')

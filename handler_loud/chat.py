@@ -28,7 +28,9 @@ class Loud(object):
         if text.startswith('forget '):
             text = text.replace('forget ', '', 1).upper()
             try:
-                shout = Shout.objects.get(text=text)
+                shout = Shout.objects.get(
+                    workspace=context.workspace, text=text
+                )
                 shout.delete()
                 context.say(f"OK. I've removed `{text}` from the list.")
             except Shout.DoesNotExist:
@@ -45,13 +47,19 @@ class Loud(object):
             loud = match.group('loud')
             self.log.debug('message: text=%s, match=%s', text, loud)
             # store it if it's new
-            shout, _ = Shout.objects.get_or_create(text=loud)
-            # find a random shout to join in with, newest shout will have the
-            # max id so pick a random int less than that.
+            shout, _ = Shout.objects.get_or_create(
+                workspace=context.workspace, text=loud
+            )
+            # find a random shout to join in with, newest shout for this
+            # workspace will have the max id so pick a random int less than that.
             i = randrange(0, shout.id)
-            # then select the first shout with an id greater than or equal to
-            # the random int we picked
-            shout = Shout.objects.filter(id__gte=i).order_by('id').first()
+            # then select the first shout (for this workspace) with an id
+            # greater than or equal to the random int we picked.
+            ws_shouts = Shout.objects.filter(workspace=context.workspace)
+            shout = ws_shouts.filter(id__gte=i).order_by('id').first()
+            if shout is None:
+                # i was larger than any id in this workspace; wrap around
+                shout = ws_shouts.order_by('id').first()
             self.log.debug('message: i=%d, shout=%s', i, shout)
             if shout:
                 # we found something say it

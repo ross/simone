@@ -555,6 +555,7 @@ class TestSlackListener(TestCase):
             id='C01UTGR299A',
             name='bot-dev-private',
             channel_type=Channel.Type.PRIVATE,
+            workspace=self.workspace,
         )
 
         # bot is added to a private channel

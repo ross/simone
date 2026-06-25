@@ -83,6 +83,13 @@ class Channel(models.Model):
         PRIVATE = 'private'
         DIRECT = 'direct'
 
+    workspace = models.ForeignKey(
+        'slacker.Workspace',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+    )
     id = models.CharField(max_length=16, primary_key=True)
     name = models.CharField(max_length=255)
     channel_type = models.CharField(max_length=7, choices=Type.choices)

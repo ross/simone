@@ -29,7 +29,9 @@ class Sparkles(object):
         if command == 'sparkly':
             buf = StringIO()
             buf.write('Sparkly people:\n')
-            for user in User.objects.order_by('-sparkles')[:10]:
+            for user in User.objects.filter(
+                workspace=context.workspace
+            ).order_by('-sparkles')[:10]:
                 buf.write(f'{user.sparkles:4d}')
                 buf.write(' - ')
                 buf.write(context.user_mention(user.user_id))
@@ -40,7 +42,9 @@ class Sparkles(object):
         if not mentions:
             mention = context.user_mention(sender)
             try:
-                user = User.objects.get(user_id=sender)
+                user = User.objects.get(
+                    workspace=context.workspace, user_id=sender
+                )
                 context.say(
                     f'{mention} you have {user.sparkles} :sparkles: :tada:'
                 )
@@ -60,12 +64,16 @@ class Sparkles(object):
 
         for user_id in mentions:
             try:
-                user = User.objects.get(user_id=user_id)
+                user = User.objects.get(
+                    workspace=context.workspace, user_id=user_id
+                )
                 # We're in a transation so no need to do an F() + 1
                 user.sparkles = user.sparkles + 1
                 user.save()
             except User.DoesNotExist:
-                user = User.objects.create(user_id=user_id, sparkles=1)
+                user = User.objects.create(
+                    workspace=context.workspace, user_id=user_id, sparkles=1
+                )
 
             buf.write(':tada: ')
             buf.write(context.user_mention(user_id))

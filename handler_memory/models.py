@@ -2,7 +2,14 @@ from django.db import models
 
 
 class Item(models.Model):
-    key = models.CharField(max_length=255, unique=True)
+    workspace = models.ForeignKey(
+        'slacker.Workspace',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        default=None,
+    )
+    key = models.CharField(max_length=255)
     value = models.TextField()
 
     updated_at = models.DateTimeField(auto_now=True)
@@ -10,3 +17,6 @@ class Item(models.Model):
 
     def __str__(self):
         return f'{self.key} - {self.value}'
+
+    class Meta:
+        unique_together = (('workspace', 'key'),)
