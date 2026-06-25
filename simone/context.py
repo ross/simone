@@ -22,6 +22,7 @@ class BaseContext(object):
         timestamp,
         bot_user_id,
         thread=None,
+        workspace=None,
     ):
         self.channel_id = channel_id
         self.channel_name = channel_name
@@ -29,6 +30,13 @@ class BaseContext(object):
         self.timestamp = timestamp
         self.bot_user_id = bot_user_id
         self.thread = thread
+        # slacker.Workspace for the workspace this event came from.
+        # None in offline/test contexts without a workspace (e.g. ConsoleContext).
+        self.workspace = workspace
+
+    @property
+    def team_id(self):
+        return self.workspace.team_id if self.workspace else None
 
     def say(self, text, reply=False, to_user=False, pauses=None):
         '''
@@ -79,10 +87,21 @@ class ConsoleContext(BaseContext):
     '''
 
     def __init__(
-        self, channel_id, channel_name, channel_type, timestamp, bot_user_id
+        self,
+        channel_id,
+        channel_name,
+        channel_type,
+        timestamp,
+        bot_user_id,
+        workspace=None,
     ):
         super().__init__(
-            channel_id, channel_name, channel_type, timestamp, bot_user_id
+            channel_id,
+            channel_name,
+            channel_type,
+            timestamp,
+            bot_user_id,
+            workspace=workspace,
         )
 
     def say(self, text, reply=False, to_user=False):

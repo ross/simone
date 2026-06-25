@@ -28,11 +28,10 @@ class SlackContext(BaseContext):
             channel_id=channel.id,
             channel_name=channel.name,
             channel_type=channel_type,
+            workspace=workspace,
             **kwargs,
         )
         self.client = client
-        # workspace is set directly (not via BaseContext yet; step 5 moves it there)
-        self.workspace = workspace
 
     def say(self, text, reply=False, to_user=False):
         self.log.debug('say: text=%s, reply=%s', text, reply)
