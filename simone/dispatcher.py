@@ -88,8 +88,8 @@ class Dispatcher(object):
         )
 
         oauth_settings = OAuthSettings(
-            client_id=environ['SLACK_CLIENT_ID'],
-            client_secret=environ['SLACK_CLIENT_SECRET'],
+            client_id=environ.get('SLACK_CLIENT_ID', ''),
+            client_secret=environ.get('SLACK_CLIENT_SECRET', ''),
             scopes=[
                 'channels:history',
                 'channels:read',
@@ -112,7 +112,7 @@ class Dispatcher(object):
 
         app = App(
             name='simone',
-            signing_secret=environ['SLACK_SIGNING_SECRET'],
+            signing_secret=environ.get('SLACK_SIGNING_SECRET', ''),
             oauth_settings=oauth_settings,
             listener_executor=executor,
         )
@@ -335,26 +335,35 @@ class Dispatcher(object):
             listener = self.listeners[cron['listener']]
             # Fire once per workspace that has the named channel.
             for workspace in Workspace.objects.all():
-                channel = listener.channel(cron['channel'], workspace=workspace)
-                # we do need to check for channel here as we don't require them
-                # to exist at __init__ time in case we later learn about them
-                if not channel:
-                    self.log.debug(
-                        'tick: channel=%s not found for workspace=%s',
-                        cron['channel'],
-                        workspace,
+                try:
+                    channel = listener.channel(
+                        cron['channel'], workspace=workspace
                     )
-                    continue
-                # Build a per-workspace client from the stored bot token (cron
-                # runs outside a Bolt request, so there is no injected client).
-                client = WebClient(token=workspace.bot_token)
-                context = listener.context(
-                    client=client,
-                    workspace=workspace,
-                    bot_user_id=workspace.bot_user_id,
-                    channel=channel,
-                )
-                handler.cron(context, cron=cron, dispatcher=self)
+                    # we do need to check for channel here as we don't require
+                    # them to exist at __init__ time in case we later learn
+                    # about them
+                    if not channel:
+                        self.log.debug(
+                            'tick: channel=%s not found for workspace=%s',
+                            cron['channel'],
+                            workspace,
+                        )
+                        continue
+                    # Build a per-workspace client from the stored bot token
+                    # (cron runs outside a Bolt request, so there is no
+                    # injected client).
+                    client = WebClient(token=workspace.bot_token)
+                    context = listener.context(
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=workspace.bot_user_id,
+                        channel=channel,
+                    )
+                    handler.cron(context, cron=cron, dispatcher=self)
+                except Exception:
+                    self.log.exception(
+                        'tick: cron=%s failed for workspace=%s', cron, workspace
+                    )
 
 
 class Cron(Thread):

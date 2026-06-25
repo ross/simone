@@ -47,20 +47,13 @@ class Loud(object):
             loud = match.group('loud')
             self.log.debug('message: text=%s, match=%s', text, loud)
             # store it if it's new
-            shout, _ = Shout.objects.get_or_create(
-                workspace=context.workspace, text=loud
-            )
-            # find a random shout to join in with, newest shout for this
-            # workspace will have the max id so pick a random int less than that.
-            i = randrange(0, shout.id)
-            # then select the first shout (for this workspace) with an id
-            # greater than or equal to the random int we picked.
+            Shout.objects.get_or_create(workspace=context.workspace, text=loud)
+            # pick a uniformly random shout for this workspace; get_or_create
+            # above guarantees count >= 1
             ws_shouts = Shout.objects.filter(workspace=context.workspace)
-            shout = ws_shouts.filter(id__gte=i).order_by('id').first()
-            if shout is None:
-                # i was larger than any id in this workspace; wrap around
-                shout = ws_shouts.order_by('id').first()
-            self.log.debug('message: i=%d, shout=%s', i, shout)
+            count = ws_shouts.count()
+            shout = ws_shouts.order_by('id')[randrange(0, count)]
+            self.log.debug('message: count=%d, shout=%s', count, shout)
             if shout:
                 # we found something say it
                 context.say(shout.text)
