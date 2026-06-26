@@ -1013,3 +1013,56 @@ class TestSlackListener(TestCase):
         # reload our object and see if the name changed
         channel.refresh_from_db()
         self.assertEqual('bot-dev-rename', channel.name)
+
+
+class TestUninstall(TestCase):
+    '''Verify that app_uninstalled and tokens_revoked clean up the Workspace.'''
+
+    def setUp(self):
+        self.workspace = make_workspace()
+        self.channel = Channel.objects.create(
+            id='C01GTHYEU4B',
+            name='bot-dev',
+            channel_type=Channel.Type.PUBLIC,
+            workspace=self.workspace,
+        )
+        self.listener = SlackListener(dispatcher=None, app=DummyApp())
+
+    def test_app_uninstalled_removes_workspace(self):
+        ctx = bolt_context(team_id=self.workspace.team_id)
+        self.listener.app_uninstalled(bolt_context=ctx)
+        self.assertFalse(
+            Workspace.objects.filter(team_id=self.workspace.team_id).exists()
+        )
+
+    def test_app_uninstalled_cascades_channels(self):
+        ctx = bolt_context(team_id=self.workspace.team_id)
+        self.listener.app_uninstalled(bolt_context=ctx)
+        self.assertFalse(Channel.objects.filter(id=self.channel.id).exists())
+
+    def test_tokens_revoked_removes_workspace(self):
+        ctx = bolt_context(team_id=self.workspace.team_id)
+        self.listener.tokens_revoked(bolt_context=ctx)
+        self.assertFalse(
+            Workspace.objects.filter(team_id=self.workspace.team_id).exists()
+        )
+
+    def test_tokens_revoked_cascades_channels(self):
+        ctx = bolt_context(team_id=self.workspace.team_id)
+        self.listener.tokens_revoked(bolt_context=ctx)
+        self.assertFalse(Channel.objects.filter(id=self.channel.id).exists())
+
+    def test_app_uninstalled_unknown_team_is_noop(self):
+        ctx = bolt_context(team_id='TUNKNOWN00')
+        self.listener.app_uninstalled(bolt_context=ctx)
+        # original workspace untouched
+        self.assertTrue(
+            Workspace.objects.filter(team_id=self.workspace.team_id).exists()
+        )
+
+    def test_tokens_revoked_missing_team_id_is_noop(self):
+        self.listener.tokens_revoked(bolt_context={})
+        # original workspace untouched
+        self.assertTrue(
+            Workspace.objects.filter(team_id=self.workspace.team_id).exists()
+        )

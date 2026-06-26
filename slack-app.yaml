@@ -26,12 +26,14 @@ settings:
   event_subscriptions:
     request_url: https://simone.xormedia.com/slack/events
     bot_events:
+      - app_uninstalled
       - channel_rename
       - member_joined_channel
       - member_left_channel
       - message.channels
       - message.groups
       - message.im
+      - tokens_revoked
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false

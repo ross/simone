@@ -103,6 +103,14 @@ class SlackListener(object):
         def _wrapper_channel_rename(event, client, context, *args, **kwargs):
             self.channel_rename(event, client=client, bolt_context=context)
 
+        @app.event("app_uninstalled")
+        def _wrapper_app_uninstalled(context, *args, **kwargs):
+            self.app_uninstalled(bolt_context=context)
+
+        @app.event("tokens_revoked")
+        def _wrapper_tokens_revoked(context, *args, **kwargs):
+            self.tokens_revoked(bolt_context=context)
+
         # TODO: emit data from auth_info to dispatcher on startup?
 
     def urlpatterns(self):
@@ -416,6 +424,31 @@ class SlackListener(object):
                 joiner=joiner,
                 inviter=inviter,
             )
+
+    def _delete_workspace(self, team_id, reason):
+        _, deleted_by_model = Workspace.objects.filter(team_id=team_id).delete()
+        self.log.info(
+            '_delete_workspace: team_id=%s, reason=%s, deleted=%s',
+            team_id,
+            reason,
+            deleted_by_model,
+        )
+
+    def app_uninstalled(self, bolt_context):
+        self.log.info('app_uninstalled: event received')
+        team_id = bolt_context.get('team_id')
+        if not team_id:
+            self.log.error('app_uninstalled: no team_id in context')
+            return
+        self._delete_workspace(team_id, 'app_uninstalled')
+
+    def tokens_revoked(self, bolt_context):
+        self.log.info('tokens_revoked: event received')
+        team_id = bolt_context.get('team_id')
+        if not team_id:
+            self.log.error('tokens_revoked: no team_id in context')
+            return
+        self._delete_workspace(team_id, 'tokens_revoked')
 
     def member_left_channel(self, event, client, bolt_context):
         self.log.debug('member_left_channel: event=%s', event)
