@@ -18,6 +18,7 @@ from threading import Event, Thread
 
 from slacker.installation_store import DjangoInstallationStore
 from slacker.listeners import SlackListener
+from slacker.models import Workspace
 
 max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
 executor = ThreadPoolExecutor(
@@ -323,8 +324,6 @@ class Dispatcher(object):
         return cron
 
     def tick(self, now):
-        from slacker.models import Workspace
-
         self.log.debug('tick: ')
         # we've validated things during init so we can just use them here
         for cron, handler in self.crons:

@@ -14,6 +14,8 @@ harmless in an otherwise-empty dev database.
 from os import environ
 
 from django.db import migrations
+from django.utils import timezone
+from slack_sdk import WebClient
 
 
 def backfill(apps, schema_editor):
@@ -45,8 +47,6 @@ def backfill(apps, schema_editor):
         )
         return
 
-    from slack_sdk import WebClient
-
     client = WebClient(token=token)
     resp = client.auth_test()
     if not resp['ok']:
@@ -60,8 +60,6 @@ def backfill(apps, schema_editor):
     bot_id = resp.get('bot_id', '')
 
     Workspace = apps.get_model('slacker', 'Workspace')
-    from django.utils import timezone
-
     workspace, created = Workspace.objects.get_or_create(
         team_id=team_id,
         defaults={

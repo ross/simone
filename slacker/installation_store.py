@@ -6,6 +6,8 @@ from slack_sdk.oauth.installation_store import InstallationStore
 from slack_sdk.oauth.installation_store.models.bot import Bot
 from slack_sdk.oauth.installation_store.models.installation import Installation
 
+from slacker.models import Workspace
+
 log = getLogger('DjangoInstallationStore')
 
 
@@ -18,16 +20,7 @@ class DjangoInstallationStore(InstallationStore):
     to delete_bot.
     '''
 
-    # Import here to avoid circular imports at module load time (this module
-    # is imported during app init, before Django apps are fully ready).
-    @staticmethod
-    def _model():
-        from slacker.models import Workspace
-
-        return Workspace
-
     def save(self, installation: Installation):
-        Workspace = self._model()
         scopes = ','.join(installation.bot_scopes or [])
         installed_at = (
             datetime.fromtimestamp(installation.installed_at, tz=timezone.utc)
@@ -59,7 +52,6 @@ class DjangoInstallationStore(InstallationStore):
         team_id: Optional[str],
         is_enterprise_install: Optional[bool] = False,
     ) -> Optional[Bot]:
-        Workspace = self._model()
         try:
             ws = Workspace.objects.get(team_id=team_id)
         except Workspace.DoesNotExist:
@@ -114,7 +106,6 @@ class DjangoInstallationStore(InstallationStore):
     def delete_bot(
         self, *, enterprise_id: Optional[str], team_id: Optional[str]
     ):
-        Workspace = self._model()
         _, deleted_by_model = Workspace.objects.filter(team_id=team_id).delete()
         log.info(
             'delete_bot: team_id=%s, deleted=%s', team_id, deleted_by_model

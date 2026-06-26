@@ -2,6 +2,7 @@ from logging import getLogger
 from time import time
 
 from simone.context import ConsoleContext, ChannelType, SenderType
+from slacker.models import Workspace
 
 
 class DispatcherMixin(object):
@@ -28,8 +29,6 @@ class DispatcherMixin(object):
         )
 
     def _get_workspace(self, team_id):
-        from slacker.models import Workspace
-
         if team_id:
             return Workspace.objects.get(team_id=team_id)
         return Workspace.objects.first()
