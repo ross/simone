@@ -10,5 +10,6 @@ class ResponseInline(admin.TabularInline):
 @admin.register(Trigger)
 class TriggerADmin(admin.ModelAdmin):
     inlines = (ResponseInline,)
-    list_display = ('phrase',)
+    list_display = ('workspace', 'phrase')
+    list_filter = ('workspace',)
     search_fields = ('phrase', 'responses__say')
