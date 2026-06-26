@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from mock import MagicMock, patch
+from django.db import connection
 from django.test import TestCase
 
 from simone.context import ChannelType
@@ -1066,3 +1067,45 @@ class TestUninstall(TestCase):
         self.assertTrue(
             Workspace.objects.filter(team_id=self.workspace.team_id).exists()
         )
+
+
+class TestEncryptedBotToken(TestCase):
+    '''Verify that bot_token is stored encrypted and decrypted transparently.'''
+
+    TOKEN = 'xoxb-test-token-value'
+
+    def _raw_token(self, team_id):
+        '''Read the raw (on-disk) bot_token value, bypassing the field descriptor.'''
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT bot_token FROM slacker_workspace WHERE team_id = %s',
+                [team_id],
+            )
+            row = cursor.fetchone()
+        return row[0] if row else None
+
+    def test_token_is_encrypted_at_rest(self):
+        ws = make_workspace(bot_token=self.TOKEN)
+        raw = self._raw_token(ws.team_id)
+        # The stored value must not be the plaintext token.
+        self.assertNotEqual(raw, self.TOKEN)
+        # It should look like a Fernet token (base64, starts with 'g').
+        self.assertTrue(raw.startswith('g'), f'unexpected raw value: {raw!r}')
+
+    def test_token_round_trips(self):
+        ws = make_workspace(bot_token=self.TOKEN)
+        reloaded = Workspace.objects.get(team_id=ws.team_id)
+        self.assertEqual(reloaded.bot_token, self.TOKEN)
+
+    def test_legacy_plaintext_fallback(self):
+        '''A plaintext token written directly (simulating a pre-migration row)
+        is returned as-is rather than raising an error.'''
+        ws = make_workspace(bot_token=self.TOKEN)
+        # Overwrite the column with raw plaintext, bypassing the ORM.
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'UPDATE slacker_workspace SET bot_token = %s WHERE team_id = %s',
+                [self.TOKEN, ws.team_id],
+            )
+        reloaded = Workspace.objects.get(team_id=ws.team_id)
+        self.assertEqual(reloaded.bot_token, self.TOKEN)

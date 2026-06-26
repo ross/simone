@@ -14,6 +14,9 @@ DATABASES = {
     }
 }
 
+# Fixed Fernet key for tests — do NOT use in production.
+SIMONE_TOKEN_KEY = 'GQescJwtNohj3bQnindzxRbAqf7ecJ4IuRrZ39Bbzv8='
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,

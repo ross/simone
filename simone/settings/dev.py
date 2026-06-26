@@ -65,3 +65,6 @@ LOGGING = {
 }
 
 RESPONDER_COOLDOWN = 30
+
+# Fixed Fernet key for local development — do NOT use in production.
+SIMONE_TOKEN_KEY = 'GQescJwtNohj3bQnindzxRbAqf7ecJ4IuRrZ39Bbzv8='

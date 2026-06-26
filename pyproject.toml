@@ -11,6 +11,7 @@ version = "0.0.1"
 dependencies = [
     "Django>=4.0.8,<5.0",
     "cron-validator>=1.0.3",
+    "cryptography>=43.0.0",
     "gunicorn>=20.1.0",
     "holidays>=0.11.3.1",
     "mysql-connector-python>=9.1.0",

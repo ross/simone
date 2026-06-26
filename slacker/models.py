@@ -1,6 +1,7 @@
 from django.db import models
 
 from simone.context import ChannelType
+from .fields import EncryptedField
 
 
 class Workspace(models.Model):
@@ -16,7 +17,7 @@ class Workspace(models.Model):
     enterprise_id = models.CharField(
         max_length=32, null=True, blank=True, default=None
     )
-    bot_token = models.CharField(max_length=255)
+    bot_token = EncryptedField()
     bot_id = models.CharField(max_length=32)
     bot_user_id = models.CharField(max_length=32)
     # Comma-separated list of granted bot scopes

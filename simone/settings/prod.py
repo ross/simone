@@ -18,6 +18,7 @@ def _require_secret(name):
 SLACK_SIGNING_SECRET = _require_secret('SLACK_SIGNING_SECRET')
 SLACK_CLIENT_ID = _require_secret('SLACK_CLIENT_ID')
 SLACK_CLIENT_SECRET = _require_secret('SLACK_CLIENT_SECRET')
+SIMONE_TOKEN_KEY = _require_secret('SIMONE_TOKEN_KEY')
 
 STATIC_ROOT = './static'
 
