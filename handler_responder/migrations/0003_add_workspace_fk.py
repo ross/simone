@@ -12,6 +12,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(
+            lambda apps, se: se.connection.vendor == 'mysql'
+            and se.execute(
+                "ALTER TABLE handler_responder_trigger CONVERT TO CHARACTER SET utf8mb4"
+            ),
+            migrations.RunPython.noop,
+        ),
         migrations.AddField(
             model_name="trigger",
             name="workspace",

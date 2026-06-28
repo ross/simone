@@ -12,6 +12,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(
+            lambda apps, se: se.connection.vendor == 'mysql'
+            and se.execute(
+                "ALTER TABLE handler_loud_shout CONVERT TO CHARACTER SET utf8mb4"
+            ),
+            migrations.RunPython.noop,
+        ),
         migrations.AddField(
             model_name="shout",
             name="workspace",

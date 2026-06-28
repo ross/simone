@@ -12,6 +12,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(
+            lambda apps, se: se.connection.vendor == 'mysql'
+            and se.execute(
+                "ALTER TABLE handler_about_fact CONVERT TO CHARACTER SET utf8mb4"
+            ),
+            migrations.RunPython.noop,
+        ),
         migrations.AlterUniqueTogether(name="fact", unique_together=set()),
         migrations.AlterIndexTogether(name="fact", index_together=set()),
         migrations.AddField(

@@ -9,6 +9,13 @@ class Migration(migrations.Migration):
     dependencies = [("slacker", "0004_workspace_model")]
 
     operations = [
+        migrations.RunPython(
+            lambda apps, se: se.connection.vendor == 'mysql'
+            and se.execute(
+                "ALTER TABLE slacker_channel CONVERT TO CHARACTER SET utf8mb4"
+            ),
+            migrations.RunPython.noop,
+        ),
         migrations.AddField(
             model_name="channel",
             name="workspace",
@@ -19,5 +26,5 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.CASCADE,
                 to="slacker.workspace",
             ),
-        )
+        ),
     ]
