@@ -32,9 +32,9 @@ class Memory(object):
                 # search
                 text = text.split('|', 1)[1].strip()
                 max_items = 25
-                items = Item.objects.filter(key__icontains=text)[
-                    : max_items + 1
-                ]
+                items = Item.objects.filter(
+                    workspace=context.workspace, key__icontains=text
+                )[: max_items + 1]
                 if items:
                     buf = StringIO()
                     buf.write('You might be looking for one of these:\n```')
@@ -53,16 +53,22 @@ class Memory(object):
                 # we're recording
                 key, value = text.split(' is ', 1)
                 try:
-                    item = Item.objects.get(key=key)
+                    item = Item.objects.get(
+                        workspace=context.workspace, key=key
+                    )
                     context.say(
                         f"Unfortunately, {item.key} is already stored as {item.value}; Try forgetting it first"
                     )
                 except Item.DoesNotExist:
-                    item = Item.objects.create(key=key, value=value)
+                    item = Item.objects.create(
+                        workspace=context.workspace, key=key, value=value
+                    )
                     context.say(f"OK. I'll remember {item.key} is {item.value}")
             else:
                 try:
-                    item = Item.objects.get(key=text)
+                    item = Item.objects.get(
+                        workspace=context.workspace, key=text
+                    )
                     context.say(f'{item.key} is {item.value}')
                 except Item.DoesNotExist:
                     context.say(
@@ -70,7 +76,7 @@ class Memory(object):
                     )
         else:  # forget
             try:
-                item = Item.objects.get(key=text)
+                item = Item.objects.get(workspace=context.workspace, key=text)
                 context.say(f"OK. I'll forget that {item.key} was {item.value}")
                 item.delete()
             except Item.DoesNotExist:

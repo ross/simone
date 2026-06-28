@@ -28,7 +28,9 @@ class Loud(object):
         if text.startswith('forget '):
             text = text.replace('forget ', '', 1).upper()
             try:
-                shout = Shout.objects.get(text=text)
+                shout = Shout.objects.get(
+                    workspace=context.workspace, text=text
+                )
                 shout.delete()
                 context.say(f"OK. I've removed `{text}` from the list.")
             except Shout.DoesNotExist:
@@ -45,14 +47,18 @@ class Loud(object):
             loud = match.group('loud')
             self.log.debug('message: text=%s, match=%s', text, loud)
             # store it if it's new
-            shout, _ = Shout.objects.get_or_create(text=loud)
-            # find a random shout to join in with, newest shout will have the
-            # max id so pick a random int less than that.
-            i = randrange(0, shout.id)
-            # then select the first shout with an id greater than or equal to
-            # the random int we picked
-            shout = Shout.objects.filter(id__gte=i).order_by('id').first()
-            self.log.debug('message: i=%d, shout=%s', i, shout)
+            Shout.objects.get_or_create(workspace=context.workspace, text=loud)
+            # Pick a uniformly random shout for this workspace.
+            # get_or_create above guarantees count >= 1.
+            # Efficiency: the workspace FK carries a DB index (Django default),
+            # so count() is an index range-scan and the offset fetch walks at
+            # most N rows in that index — both bounded by a single workspace's
+            # shout count, which is small in practice.  Uniform distribution is
+            # preserved (no gap-bias from random-id tricks).
+            ws_shouts = Shout.objects.filter(workspace=context.workspace)
+            count = ws_shouts.count()
+            shout = ws_shouts.order_by('id')[randrange(0, count)]
+            self.log.debug('message: count=%d, shout=%s', count, shout)
             if shout:
                 # we found something say it
                 context.say(shout.text)

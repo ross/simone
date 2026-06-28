@@ -6,14 +6,19 @@ from django.db import close_old_connections, transaction
 from functools import wraps
 from io import StringIO
 from logging import getLogger
-from os import environ
+from os import environ, path
 from pprint import pformat, pprint
 from pylev import levenshtein
 from slack_bolt import App
+from slack_bolt.oauth.oauth_settings import OAuthSettings
+from slack_sdk import WebClient
+from slack_sdk.oauth.state_store import FileOAuthStateStore
 from time import time
 from threading import Event, Thread
 
+from slacker.installation_store import DjangoInstallationStore
 from slacker.listeners import SlackListener
+from slacker.models import Workspace
 
 max_dispatchers = getattr(settings, 'MAX_DISPATCHERS', 10)
 executor = ThreadPoolExecutor(
@@ -75,14 +80,39 @@ class Dispatcher(object):
     def __init__(self, handlers):
         self.handlers = handlers
 
-        token_verification = getattr(
-            settings, 'SLACK_TOKEN_VERIFICATION', False
+        # OAuth state files live in <BASE_DIR>/slack_state/ by default; can be
+        # overridden via SLACK_STATE_DIR in Django settings.
+        state_dir = getattr(settings, 'SLACK_STATE_DIR', None) or path.join(
+            settings.BASE_DIR, 'slack_state'
         )
+
+        oauth_settings = OAuthSettings(
+            client_id=environ.get('SLACK_CLIENT_ID', ''),
+            client_secret=environ.get('SLACK_CLIENT_SECRET', ''),
+            scopes=[
+                'channels:history',
+                'channels:read',
+                'chat:write',
+                'groups:history',
+                'groups:read',
+                'groups:write',
+                'im:history',
+                'im:read',
+                'im:write',
+                'reactions:write',
+            ],
+            installation_store=DjangoInstallationStore(),
+            state_store=FileOAuthStateStore(
+                expiration_seconds=600, base_dir=state_dir
+            ),
+            install_path='/slack/install',
+            redirect_uri_path='/slack/oauth_redirect',
+        )
+
         app = App(
             name='simone',
-            token=environ["SLACK_BOT_TOKEN"],
-            signing_secret=environ["SLACK_SIGNING_SECRET"],
-            token_verification_enabled=token_verification,
+            signing_secret=environ.get('SLACK_SIGNING_SECRET', ''),
+            oauth_settings=oauth_settings,
             listener_executor=executor,
         )
         self.listeners = {'slack': SlackListener(self, app)}
@@ -281,13 +311,6 @@ class Dispatcher(object):
         if not channel_name:
             self.log.warning('validate_cron: missing channel, cron=%s', cron)
             return None
-        channel = listener.channel(channel_name)
-        if not channel:
-            self.log.warning(
-                'validate: unrecognized channel=%s, listener=%s, keeping cron in case we later learn about it ',
-                channel_name,
-                listener,
-            )
         when = cron.get('when', None)
         if not when:
             self.log.warning('validate_cron: missing when, cron=%s', cron)
@@ -307,18 +330,37 @@ class Dispatcher(object):
                 # not time
                 continue
             listener = self.listeners[cron['listener']]
-            channel = listener.channel(cron['channel'])
-            # we do need to check for channel here as we don't require them to
-            # exist at __init__ time in case we later learn about them
-            if not channel:
-                self.log.warning(
-                    'tick: unrecognized channel=%s, listener=%s',
-                    channel,
-                    listener,
-                )
-                continue
-            context = listener.context(channel=channel)
-            handler.cron(context, cron=cron, dispatcher=self)
+            # Fire once per workspace that has the named channel.
+            for workspace in Workspace.objects.all():
+                try:
+                    channel = listener.channel(
+                        cron['channel'], workspace=workspace
+                    )
+                    # we do need to check for channel here as we don't require
+                    # them to exist at __init__ time in case we later learn
+                    # about them
+                    if not channel:
+                        self.log.debug(
+                            'tick: channel=%s not found for workspace=%s',
+                            cron['channel'],
+                            workspace,
+                        )
+                        continue
+                    # Build a per-workspace client from the stored bot token
+                    # (cron runs outside a Bolt request, so there is no
+                    # injected client).
+                    client = WebClient(token=workspace.bot_token)
+                    context = listener.context(
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=workspace.bot_user_id,
+                        channel=channel,
+                    )
+                    handler.cron(context, cron=cron, dispatcher=self)
+                except Exception:
+                    self.log.exception(
+                        'tick: cron=%s failed for workspace=%s', cron, workspace
+                    )
 
 
 class Cron(Thread):

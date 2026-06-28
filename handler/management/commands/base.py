@@ -2,6 +2,7 @@ from logging import getLogger
 from time import time
 
 from simone.context import ConsoleContext, ChannelType, SenderType
+from slacker.models import Workspace
 
 
 class DispatcherMixin(object):
@@ -19,6 +20,18 @@ class DispatcherMixin(object):
         parser.add_argument('--sender-type', type=str, default='user')
         parser.add_argument('--timestamp', type=float)
         parser.add_argument('--mentions', nargs='*', type=str, default=[])
+        parser.add_argument(
+            '--team-id',
+            type=str,
+            default=None,
+            help='Slack team_id to use for workspace context. '
+            'Defaults to the first Workspace found in the DB.',
+        )
+
+    def _get_workspace(self, team_id):
+        if team_id:
+            return Workspace.objects.get(team_id=team_id)
+        return Workspace.objects.first()
 
     def handle(self, *args, **options):
         channel_id = options['channel_id']
@@ -26,8 +39,18 @@ class DispatcherMixin(object):
         channel_type = ChannelType(options['channel_type'])
         timestamp = options.get('timestamp', time())
         bot_user_id = options['bot_user_id']
+        workspace = self._get_workspace(options.get('team_id'))
+        if workspace and bot_user_id == 'bot-user-id':
+            # use the workspace's actual bot user id when the caller didn't
+            # override it explicitly
+            bot_user_id = workspace.bot_user_id
         context = ConsoleContext(
-            channel_id, channel_name, channel_type, timestamp, bot_user_id
+            channel_id,
+            channel_name,
+            channel_type,
+            timestamp,
+            bot_user_id,
+            workspace=workspace,
         )
         text = ' '.join(options['text'])
         if text.startswith('.'):

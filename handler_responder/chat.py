@@ -26,7 +26,9 @@ class Responder(object):
 
     def __init__(self, cooldown):
         self.cooldown = cooldown
-        self._triggers = None
+        # {team_id: {tokenized_phrase: trigger_id}}
+        # None key is used when workspace is unavailable (pre-migration state).
+        self._triggers = {}
         self._last = {}
 
     def config(self):
@@ -38,7 +40,9 @@ class Responder(object):
             # removing a response
             phrase, say = [t.strip() for t in text.split(' do not respond ', 1)]
             try:
-                trigger = Trigger.objects.get(phrase=phrase)
+                trigger = Trigger.objects.get(
+                    workspace=context.workspace, phrase=phrase
+                )
                 response = trigger.responses.get(say=say)
                 response.delete()
                 if trigger.responses.count() == 0:
@@ -50,11 +54,13 @@ class Responder(object):
                 context.say(
                     f"I wouldn't respond with `{say}` to `{phrase}` in the frist place."
                 )
-            self._triggers = None
+            self._invalidate(context)
         elif ' respond ' in text:
             # adding a response
             phrase, say = text.split(' respond ', 1)
-            trigger, _ = Trigger.objects.get_or_create(phrase=phrase)
+            trigger, _ = Trigger.objects.get_or_create(
+                workspace=context.workspace, phrase=phrase
+            )
             try:
                 response = trigger.responses.get(say=say)
             except Response.DoesNotExist:
@@ -62,12 +68,14 @@ class Responder(object):
             context.say(
                 f'Got it. When someone says `{phrase}` I might respond `{say}`.'
             )
-            self._triggers = None
+            self._invalidate(context)
         else:
             # list responses
             phrase = text.strip()
             try:
-                trigger = Trigger.objects.get(phrase=phrase)
+                trigger = Trigger.objects.get(
+                    workspace=context.workspace, phrase=phrase
+                )
                 responses = '\n--\n'.join(
                     [r.say for r in trigger.responses.all()]
                 )
@@ -77,14 +85,19 @@ class Responder(object):
             except Trigger.DoesNotExist:
                 context.say(f"I don't have any responses for `{text}`")
 
-    @property
-    def triggers(self):
-        if self._triggers is None:
-            self._triggers = {
-                tokenize(t.phrase): t.id for t in Trigger.objects.all()
-            }
+    def _invalidate(self, context):
+        '''Discard the trigger cache for this workspace so it is reloaded next message.'''
+        self._triggers.pop(context.team_id, None)
 
-        return self._triggers
+    def _workspace_triggers(self, workspace):
+        '''Return (and cache) the trigger map for the given workspace.'''
+        team_id = workspace.team_id if workspace else None
+        if team_id not in self._triggers:
+            self._triggers[team_id] = {
+                tokenize(t.phrase): t.id
+                for t in Trigger.objects.filter(workspace=workspace)
+            }
+        return self._triggers[team_id]
 
     def message(self, context, text, **kwargs):
         if (time() - self._last.get(context.channel_id, 0)) <= self.cooldown:
@@ -93,7 +106,7 @@ class Responder(object):
         tokens = tokenize(text)
         # shuffle the triggers in case there are multiple matches so that we'll
         # pick a "random" one
-        triggers = list(self.triggers.items())
+        triggers = list(self._workspace_triggers(context.workspace).items())
         shuffle(triggers)
         for phrase, trigger_id in triggers:
             # if the tokenized phrase appears in the tokenized text

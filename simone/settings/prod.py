@@ -1,6 +1,24 @@
 from os import environ
 
+from django.core.exceptions import ImproperlyConfigured
+
 DEBUG = False
+
+
+def _require_secret(name):
+    '''Read an env var and raise ImproperlyConfigured if it is missing or blank.'''
+    value = environ.get(name, '')
+    if not value.strip():
+        raise ImproperlyConfigured(
+            f'{name} must be set to a non-empty value in production'
+        )
+    return value
+
+
+SLACK_SIGNING_SECRET = _require_secret('SLACK_SIGNING_SECRET')
+SLACK_CLIENT_ID = _require_secret('SLACK_CLIENT_ID')
+SLACK_CLIENT_SECRET = _require_secret('SLACK_CLIENT_SECRET')
+SIMONE_TOKEN_KEY = _require_secret('SIMONE_TOKEN_KEY')
 
 STATIC_ROOT = './static'
 
@@ -40,3 +58,8 @@ LOGGING = {
 }
 
 RESPONDER_COOLDOWN = 3600
+
+# OAuth state files (10-min CSRF tokens during /slack/install flow).
+# Container-local is fine; losing them on restart just means in-flight
+# install attempts get a CSRF error and the user retries.
+SLACK_STATE_DIR = '/app/slack_state'

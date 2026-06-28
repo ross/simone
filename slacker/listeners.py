@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.http import HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import path
@@ -6,7 +7,7 @@ from slack_bolt.adapter.django import SlackRequestHandler
 import re
 
 from simone.context import BaseContext, ChannelType, SenderType
-from .models import Channel
+from .models import Channel, Workspace
 
 
 class SlackException(Exception):
@@ -16,7 +17,7 @@ class SlackException(Exception):
 class SlackContext(BaseContext):
     log = getLogger('SlackContext')
 
-    def __init__(self, app, *args, channel, **kwargs):
+    def __init__(self, client, *args, channel, workspace=None, **kwargs):
         if channel.channel_type == 'public':
             channel_type = ChannelType.PUBLIC
         elif channel.channel_type == 'private':
@@ -28,14 +29,15 @@ class SlackContext(BaseContext):
             channel_id=channel.id,
             channel_name=channel.name,
             channel_type=channel_type,
+            workspace=workspace,
             **kwargs,
         )
-        self.app = app
+        self.client = client
 
     def say(self, text, reply=False, to_user=False):
         self.log.debug('say: text=%s, reply=%s', text, reply)
         if to_user:
-            self.app.client.chat_postEphemeral(
+            self.client.chat_postEphemeral(
                 channel=self.channel_id,
                 text=text,
                 thread_ts=self.thread,
@@ -51,12 +53,12 @@ class SlackContext(BaseContext):
             thread = self.timestamp
         else:
             thread = None
-        self.app.client.chat_postMessage(
+        self.client.chat_postMessage(
             channel=self.channel_id, text=text, thread_ts=thread
         )
 
     def react(self, emoji):
-        self.app.client.reactions_add(
+        self.client.reactions_add(
             channel=self.channel_id, name=emoji, timestamp=self.timestamp
         )
 
@@ -83,24 +85,31 @@ class SlackListener(object):
         self.dispatcher = dispatcher
         self.app = app
 
-        self._auth_info = None
-        self._bot_mention = None
-
         @app.event("message")
-        def _wrapper_message(event, *args, **kwargs):
-            self.message(event)
+        def _wrapper_message(event, client, context, *args, **kwargs):
+            self.message(event, client=client, bolt_context=context)
 
         @app.event("member_joined_channel")
-        def _wrapper_member_joined(event, *args, **kwargs):
-            self.member_joined_channel(event)
+        def _wrapper_member_joined(event, client, context, *args, **kwargs):
+            self.member_joined_channel(
+                event, client=client, bolt_context=context
+            )
 
         @app.event("member_left_channel")
-        def _wrapper_member_left(event, *args, **kwargs):
-            self.member_left_channel(event)
+        def _wrapper_member_left(event, client, context, *args, **kwargs):
+            self.member_left_channel(event, client=client, bolt_context=context)
 
         @app.event("channel_rename")
-        def _wrapper_channel_rename(event, *args, **kwargs):
-            self.channel_rename(event)
+        def _wrapper_channel_rename(event, client, context, *args, **kwargs):
+            self.channel_rename(event, client=client, bolt_context=context)
+
+        @app.event("app_uninstalled")
+        def _wrapper_app_uninstalled(context, *args, **kwargs):
+            self.app_uninstalled(bolt_context=context)
+
+        @app.event("tokens_revoked")
+        def _wrapper_tokens_revoked(context, *args, **kwargs):
+            self.tokens_revoked(bolt_context=context)
 
         # TODO: emit data from auth_info to dispatcher on startup?
 
@@ -109,59 +118,59 @@ class SlackListener(object):
         handler = SlackRequestHandler(app=self.app)
 
         @csrf_exempt
-        def slack_events_handler(request: HttpRequest):
+        def slack_handler(request: HttpRequest):
             return handler.handle(request)
 
-        return [path("slack/events", slack_events_handler, name="slack_events")]
+        return [
+            path("slack/events", slack_handler, name="slack_events"),
+            path("slack/install", slack_handler, name="slack_install"),
+            path(
+                "slack/oauth_redirect",
+                slack_handler,
+                name="slack_oauth_redirect",
+            ),
+        ]
 
-    def channel(self, channel_name):
+    def channel(self, channel_name, workspace=None):
         try:
-            return Channel.objects.get(name=channel_name)
+            return Channel.objects.get(workspace=workspace, name=channel_name)
         except Channel.DoesNotExist:
             return None
 
-    def context(self, channel=None, thread=None, timestamp=None):
+    def context(
+        self,
+        client=None,
+        workspace=None,
+        bot_user_id=None,
+        channel=None,
+        thread=None,
+        timestamp=None,
+    ):
+        '''Build a SlackContext.
+
+        When called from event handlers, pass explicit client/workspace/bot_user_id
+        from the Bolt per-request context.  When called from cron (step 7), those
+        will be supplied per-workspace as well.  Until step 7 lands, cron calls
+        that omit client/workspace continue to use self.app.client as a fallback.
+        '''
         return SlackContext(
-            app=self.app,
+            client=client or self.app.client,
             channel=channel,
             thread=thread,
             timestamp=timestamp,
-            bot_user_id=self.bot_user_id,
+            bot_user_id=bot_user_id or 'unknown',
+            workspace=workspace,
         )
 
-    @property
-    def auth_info(self):
-        '''
-        {
-            'ok': True,
-            'url': 'https://itsbreaktime.slack.com/',
-            'team': "It's Break Time",
-            'user': 'simone',
-            'team_id': 'T01GZF7DHKN',
-            'user_id': 'U01V6PW6XDE',
-            'bot_id': 'B01UH09KL2E',
-            'is_enterprise_install': False
-        }
-        '''
-        if self._auth_info is None:
-            resp = self.app.client.auth_test()
-            if resp.status_code != 200:
-                raise SlackException('failed to retrieve auth_info')
-
-            self._auth_info = resp.data
-            self.log.info('auth_info: auth_info=%s', self._auth_info)
-
-        return self._auth_info
-
-    @property
-    def bot_user_id(self):
-        return self.auth_info['user_id']
-
-    @property
-    def bot_mention(self):
-        if self._bot_mention is None:
-            self._bot_mention = f'<@{self.bot_user_id}>'
-        return self._bot_mention
+    def _get_workspace(self, team_id):
+        try:
+            return Workspace.objects.get(team_id=team_id)
+        except Workspace.DoesNotExist:
+            self.log.error(
+                '_get_workspace: unknown team_id=%s; has this workspace installed the app?',
+                team_id,
+            )
+            return None
 
     def _channel_params(self, channel):
         if channel.get('is_private', False):
@@ -177,29 +186,44 @@ class SlackListener(object):
             'channel_type': channel_type.value,
         }
 
-    def _channel_info(self, channel_id):
-        resp = self.app.client.conversations_info(channel=channel_id)
+    def _channel_info(self, client, channel_id):
+        resp = client.conversations_info(channel=channel_id)
         return resp.data['channel']
 
-    def _get_or_create_channel(self, channel_id):
+    def _get_or_create_channel(self, client, channel_id, workspace=None):
         try:
             return Channel.objects.get(id=channel_id)
         except Channel.DoesNotExist:
             pass
-        channel = self._channel_info(channel_id)
-        params = self._channel_params(channel)
-        return Channel.objects.create(**params)
+        channel_data = self._channel_info(client, channel_id)
+        params = self._channel_params(channel_data)
+        try:
+            return Channel.objects.create(workspace=workspace, **params)
+        except IntegrityError:
+            # Concurrent event created the same channel between our get and create.
+            return Channel.objects.get(id=channel_id)
 
-    def channel_rename(self, event):
+    def channel_rename(self, event, client, bolt_context):
         self.log.debug('channel_rename: event=%s', event)
+        team_id = bolt_context.get('team_id')
+        workspace = self._get_workspace(team_id) if team_id else None
+        if workspace is None:
+            return
         params = self._channel_params(event['channel'])
         channel_id = params.pop('id')
         channel, _ = Channel.objects.update_or_create(
-            id=channel_id, defaults=params
+            id=channel_id, defaults={**params, 'workspace': workspace}
         )
 
-    def message(self, event):
+    def message(self, event, client, bolt_context):
         self.log.debug('message: event=%s', event)
+
+        team_id = bolt_context['team_id']
+        workspace = self._get_workspace(team_id)
+        if workspace is None:
+            return
+        bot_user_id = bolt_context['bot_user_id']
+        bot_mention = f'<@{bot_user_id}>'
 
         subtype = event.get('subtype', None)
         if subtype == 'channel_join':
@@ -230,7 +254,7 @@ class SlackListener(object):
             )
             return
 
-        channel = self._get_or_create_channel(channel_id)
+        channel = self._get_or_create_channel(client, channel_id, workspace)
         text = message['text']
 
         thread = event.get('thread_ts', None)
@@ -255,7 +279,9 @@ class SlackListener(object):
                     user,
                 )
                 try:
-                    removed_from = Channel.objects.get(name=channel_name)
+                    removed_from = Channel.objects.get(
+                        workspace=workspace, name=channel_name
+                    )
                 except Channel.DoesNotExist:
                     self.log.warn(
                         'message: removed from channel (%s) we do not recognize',
@@ -263,7 +289,13 @@ class SlackListener(object):
                     )
                     return
                 self.dispatcher.removed(
-                    context=self.context(channel=removed_from, timestamp=ts),
+                    context=self.context(
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=bot_user_id,
+                        channel=removed_from,
+                        timestamp=ts,
+                    ),
                     remover=user,
                 )
             else:
@@ -273,7 +305,6 @@ class SlackListener(object):
                 )
             return
 
-        bot_user_id = self.bot_user_id
         try:
             mentions = []
             for i, block in enumerate(message['blocks']):
@@ -292,7 +323,12 @@ class SlackListener(object):
             # Note: we ignore any edited commands
             self.dispatcher.edit(
                 context=self.context(
-                    channel=channel, thread=thread, timestamp=ts
+                    client=client,
+                    workspace=workspace,
+                    bot_user_id=bot_user_id,
+                    channel=channel,
+                    thread=thread,
+                    timestamp=ts,
                 ),
                 text=text,
                 previous_text=previous_text,
@@ -302,11 +338,16 @@ class SlackListener(object):
                 mentions=mentions,
             )
         else:
-            if text.startswith(self.bot_mention):
-                text = text.replace(f'{self.bot_mention} ', '', 1)
+            if text.startswith(bot_mention):
+                text = text.replace(f'{bot_mention} ', '', 1)
                 self.dispatcher.command(
                     context=self.context(
-                        channel=channel, thread=thread, timestamp=ts
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=bot_user_id,
+                        channel=channel,
+                        thread=thread,
+                        timestamp=ts,
                     ),
                     text=text,
                     sender=sender,
@@ -320,7 +361,12 @@ class SlackListener(object):
                 text = text.replace(self.dispatcher.LEADER, '', 1)
                 self.dispatcher.command(
                     context=self.context(
-                        channel=channel, thread=thread, timestamp=ts
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=bot_user_id,
+                        channel=channel,
+                        thread=thread,
+                        timestamp=ts,
                     ),
                     text=text,
                     sender=sender,
@@ -330,7 +376,12 @@ class SlackListener(object):
             else:
                 self.dispatcher.message(
                     context=self.context(
-                        channel=channel, thread=thread, timestamp=ts
+                        client=client,
+                        workspace=workspace,
+                        bot_user_id=bot_user_id,
+                        channel=channel,
+                        thread=thread,
+                        timestamp=ts,
                     ),
                     text=text,
                     sender=sender,
@@ -338,34 +389,87 @@ class SlackListener(object):
                     mentions=mentions,
                 )
 
-    def member_joined_channel(self, event):
+    def member_joined_channel(self, event, client, bolt_context):
         self.log.debug('member_joined_channel: event=%s', event)
+        team_id = bolt_context['team_id']
+        workspace = self._get_workspace(team_id)
+        if workspace is None:
+            return
+        bot_user_id = bolt_context['bot_user_id']
         inviter = event.get('inviter', None)
         channel = event['channel']
-        channel = self._get_or_create_channel(channel)
+        channel = self._get_or_create_channel(client, channel, workspace)
         joiner = event['user']
         event_ts = event['event_ts']
-        if joiner == self.bot_user_id:
+        if joiner == bot_user_id:
             self.dispatcher.added(
-                context=self.context(channel=channel, timestamp=event_ts),
+                context=self.context(
+                    client=client,
+                    workspace=workspace,
+                    bot_user_id=bot_user_id,
+                    channel=channel,
+                    timestamp=event_ts,
+                ),
                 inviter=inviter,
             )
         else:
             self.dispatcher.joined(
-                context=self.context(channel=channel, timestamp=event_ts),
+                context=self.context(
+                    client=client,
+                    workspace=workspace,
+                    bot_user_id=bot_user_id,
+                    channel=channel,
+                    timestamp=event_ts,
+                ),
                 joiner=joiner,
                 inviter=inviter,
             )
 
-    def member_left_channel(self, event):
+    def _delete_workspace(self, team_id, reason):
+        _, deleted_by_model = Workspace.objects.filter(team_id=team_id).delete()
+        self.log.info(
+            '_delete_workspace: team_id=%s, reason=%s, deleted=%s',
+            team_id,
+            reason,
+            deleted_by_model,
+        )
+
+    def app_uninstalled(self, bolt_context):
+        self.log.info('app_uninstalled: event received')
+        team_id = bolt_context.get('team_id')
+        if not team_id:
+            self.log.error('app_uninstalled: no team_id in context')
+            return
+        self._delete_workspace(team_id, 'app_uninstalled')
+
+    def tokens_revoked(self, bolt_context):
+        self.log.info('tokens_revoked: event received')
+        team_id = bolt_context.get('team_id')
+        if not team_id:
+            self.log.error('tokens_revoked: no team_id in context')
+            return
+        self._delete_workspace(team_id, 'tokens_revoked')
+
+    def member_left_channel(self, event, client, bolt_context):
         self.log.debug('member_left_channel: event=%s', event)
+        team_id = bolt_context['team_id']
+        workspace = self._get_workspace(team_id)
+        if workspace is None:
+            return
+        bot_user_id = bolt_context['bot_user_id']
         kicker = event.get('inviter', None)
         channel = event['channel']
-        channel = self._get_or_create_channel(channel)
+        channel = self._get_or_create_channel(client, channel, workspace)
         leaver = event['user']
         event_ts = event['event_ts']
         self.dispatcher.left(
-            context=self.context(channel=channel, timestamp=event_ts),
+            context=self.context(
+                client=client,
+                workspace=workspace,
+                bot_user_id=bot_user_id,
+                channel=channel,
+                timestamp=event_ts,
+            ),
             leaver=leaver,
             kicker=kicker,
         )
