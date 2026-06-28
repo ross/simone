@@ -82,10 +82,8 @@ class Dispatcher(object):
 
         # OAuth state files live in <BASE_DIR>/slack_state/ by default; can be
         # overridden via SLACK_STATE_DIR in Django settings.
-        state_dir = getattr(
-            settings,
-            'SLACK_STATE_DIR',
-            path.join(settings.BASE_DIR, 'slack_state'),
+        state_dir = getattr(settings, 'SLACK_STATE_DIR', None) or path.join(
+            settings.BASE_DIR, 'slack_state'
         )
 
         oauth_settings = OAuthSettings(
