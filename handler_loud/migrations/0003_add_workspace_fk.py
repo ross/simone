@@ -6,6 +6,8 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
+    atomic = False
+
     dependencies = [
         ("slacker", "0005_add_workspace_fk"),
         ("handler_loud", "0002_alter_shout_text"),
