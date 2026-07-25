@@ -26,7 +26,7 @@ mock==5.2.0
 msgpack==1.2.1
 mypy-extensions==1.1.0
 mysql-connector-python==9.7.0
-nltk==3.9.4
+nltk==3.10.0
 packaging==26.2
 pathspec==1.1.1
 platformdirs==4.10.0
