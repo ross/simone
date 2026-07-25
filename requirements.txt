@@ -42,7 +42,7 @@ pytz==2026.2
 regex==2026.5.9
 requests==2.34.2
 resolvelib==1.2.1
-setuptools==82.0.1
+setuptools==83.0.0
 six==1.17.0
 slack-bolt==1.28.0
 slack-sdk==3.42.0
