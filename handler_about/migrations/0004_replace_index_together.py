@@ -24,7 +24,13 @@ def drop_legacy_index(apps, schema_editor):
             cursor, table
         )
     if LEGACY_INDEX_NAME in constraints:
-        schema_editor.remove_index(Fact, models.Index(name=LEGACY_INDEX_NAME))
+        schema_editor.remove_index(
+            Fact,
+            models.Index(
+                fields=['workspace', 'user_id', 'created_at'],
+                name=LEGACY_INDEX_NAME,
+            ),
+        )
 
 
 class Migration(migrations.Migration):
