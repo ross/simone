@@ -13,6 +13,6 @@ class Fact(models.Model):
         return f'{self.id} - {self.value}'
 
     class Meta:
-        index_together = (('workspace', 'user_id', 'created_at'),)
+        indexes = [models.Index(fields=['workspace', 'user_id', 'created_at'])]
         unique_together = (('workspace', 'user_id', 'value'),)
         ordering = ('user_id', 'created_at')
