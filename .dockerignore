@@ -2,6 +2,7 @@
 *
 # Explicitly include the bits we want
 # TODO: find a good way to keep this in sync
+!gunicorn.conf.py
 !handler/*.py
 !handler/chat/*.py
 !handler/management/*.py
