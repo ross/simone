@@ -1,15 +1,59 @@
-version: "3.9"  # optional since v1.27.0
-
 volumes:
   simone-db-data:
     name: simone-db-data
 
 services:
   db:
-    image: mariadb:10.1
+    image: mariadb:12-noble
     ports:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: l3tmein
+      MYSQL_DATABASE: simone
+      MYSQL_USER: simone
+      MYSQL_PASSWORD: l3tmein
     volumes:
       - simone-db-data:/var/lib/mysql
+    healthcheck:
+      # --connect matters: on first boot mariadb runs init scripts against a
+      # temporary --skip-networking instance, so a socket-based check would
+      # report healthy before the real, network-enabled server (and the
+      # `simone` db/user it creates) is actually up.
+      test: ["CMD", "healthcheck.sh", "--connect"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  simone:
+    build: .
+    command: sh -c "python manage.py migrate --no-input && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app:z
+    environment:
+      ENV: dev
+      # Dev-only secret, not for production use.
+      DJANGO_SECRET_KEY: django-insecure-dev-only-not-for-production
+      DJANGO_ALLOWED_HOSTS: "localhost;127.0.0.1"
+      SIMONE_DB_NAME: simone
+      SIMONE_DB_USER: simone
+      SIMONE_DB_PASSWORD: l3tmein
+      SIMONE_DB_HOST: db
+      SIMONE_DB_PORT: "3306"
+      SLACK_BOT_TOKEN: ""
+      SLACK_SIGNING_SECRET: ""
+      # Blank is fine everywhere above, but Dispatcher builds slack_bolt's
+      # OAuthSettings unconditionally at import time and it rejects a blank
+      # client_id/client_secret, so these two need *some* non-empty value.
+      SLACK_CLIENT_ID: "dev"
+      SLACK_CLIENT_SECRET: "dev"
+      ALPHA_VANTAGE_KEY: ""
+      WSJ_QUOTES_CKEY: ""
+      WSJ_QUOTES_ENTITLEMENT_TOKEN: ""
+      OPEN_WEATHER_MAP_APP_ID: ""
+      OPENVERSE_CLIENT_ID: ""
+      OPENVERSE_CLIENT_SECRET: ""
+    depends_on:
+      db:
+        condition: service_healthy
