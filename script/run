@@ -4,4 +4,4 @@ set -e
 
 ./manage.py collectstatic --no-input
 ./manage.py migrate --no-input
-gunicorn simone.wsgi --config gunicorn.conf.py --bind 0.0.0.0:6444 --graceful-timeout 5 --preload --threads 4
+gunicorn simone.wsgi --config gunicorn.conf.py --bind 0.0.0.0:6444 --graceful-timeout 5 --threads 4
