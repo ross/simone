@@ -33,6 +33,12 @@ DATABASES = {
         'HOST': environ['SIMONE_DB_HOST'],
         'PORT': environ.get('SIMONE_DB_PORT', '3306'),
         'CONN_MAX_AGE': 300,
+        # mysql-connector-python's own default is connect_timeout=None, i.e.
+        # no timeout at all -- a stalled handshake for a new connection (the
+        # first thing a freshly forked worker or the Cron thread does) hangs
+        # the calling thread forever with nothing logged. Fail loud and fast
+        # instead.
+        'OPTIONS': {'connect_timeout': 10},
     }
 }
 

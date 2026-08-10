@@ -19,6 +19,10 @@ if 'SIMONE_DB_NAME' in environ:
             'HOST': environ['SIMONE_DB_HOST'],
             'PORT': environ.get('SIMONE_DB_PORT', '3306'),
             'CONN_MAX_AGE': 300,
+            # See prod.py: mysql-connector-python has no connect timeout by
+            # default, so a stalled connection attempt hangs forever with
+            # nothing logged instead of failing loudly.
+            'OPTIONS': {'connect_timeout': 10},
         }
     }
 else:
