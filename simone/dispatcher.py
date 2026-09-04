@@ -4,6 +4,9 @@ from datetime import datetime
 from django.conf import settings
 from django.db import close_old_connections, transaction
 from functools import wraps
+from opentelemetry import context as otel_context, trace
+from opentelemetry.context import Context
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from io import StringIO
 from logging import getLogger
 from os import environ, path
@@ -25,25 +28,38 @@ executor = ThreadPoolExecutor(
     max_workers=max_dispatchers, thread_name_prefix='simone-worker'
 )
 
+# No-op unless simone/tracing.py configured a real provider, so everything
+# below is safe with tracing turned off -- the API's default provider hands
+# back non-recording spans.
+tracer = trace.get_tracer('simone.dispatcher')
+
 
 def dispatch_with_error_reporting(func):
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
         ret = None
-        with transaction.atomic():
-            try:
-                ret = func(self, context, *args, **kwargs)
-            except Exception:
-                self.log.exception(
-                    'dispatch failed: context=%s, args=%s, kwargs=%s',
-                    context,
-                    args,
-                    kwargs,
-                )
-                context.say(
-                    'An error occured while responding to this message',
-                    reply=True,
-                )
+        # Span outside the transaction so it covers the commit too, which is
+        # where a slow write actually shows up. Recording the exception is the
+        # point rather than a bonus: this decorator deliberately swallows
+        # failures, so without it a broken handler is indistinguishable from a
+        # successful request.
+        with tracer.start_as_current_span(f'dispatch.{func.__name__}') as span:
+            with transaction.atomic():
+                try:
+                    ret = func(self, context, *args, **kwargs)
+                except Exception as e:
+                    span.record_exception(e)
+                    span.set_status(Status(StatusCode.ERROR))
+                    self.log.exception(
+                        'dispatch failed: context=%s, args=%s, kwargs=%s',
+                        context,
+                        args,
+                        kwargs,
+                    )
+                    context.say(
+                        'An error occured while responding to this message',
+                        reply=True,
+                    )
         return ret
 
     return wrap
@@ -55,16 +71,21 @@ def dispatch(func):
     @wraps(func)
     def wrap(self, context, *args, **kwargs):
         ret = None
-        with transaction.atomic():
-            try:
-                ret = func(self, context, *args, **kwargs)
-            except Exception:
-                self.log.exception(
-                    'dispatch failed: context=%s, args=%s, kwargs=%s',
-                    context,
-                    args,
-                    kwargs,
-                )
+        # See dispatch_with_error_reporting above for why the span wraps the
+        # transaction and why the exception is recorded explicitly.
+        with tracer.start_as_current_span(f'dispatch.{func.__name__}') as span:
+            with transaction.atomic():
+                try:
+                    ret = func(self, context, *args, **kwargs)
+                except Exception as e:
+                    span.record_exception(e)
+                    span.set_status(Status(StatusCode.ERROR))
+                    self.log.exception(
+                        'dispatch failed: context=%s, args=%s, kwargs=%s',
+                        context,
+                        args,
+                        kwargs,
+                    )
         return ret
 
     return wrap
@@ -266,9 +287,19 @@ class Dispatcher(object):
         self.log.debug('command: text=%s, kwargs=%s', text, kwargs)
         command_words, handler, command, text = self.find_command_handler(text)
         if handler:
-            handler.command(
-                context, command=command, text=text, dispatcher=self, **kwargs
-            )
+            # Named for the command, so a trace says *which* command was slow
+            # rather than just "a command was". The handler class goes on as an
+            # attribute rather than into the name, to keep the name low
+            # cardinality.
+            with tracer.start_as_current_span(f'command.{command}') as span:
+                span.set_attribute('simone.handler', handler.__class__.__name__)
+                handler.command(
+                    context,
+                    command=command,
+                    text=text,
+                    dispatcher=self,
+                    **kwargs,
+                )
         else:
             self._did_you_mean(context, command_words)
 
@@ -287,8 +318,14 @@ class Dispatcher(object):
 
     @dispatch
     def message(self, *args, **kwargs):
+        # Every registered message handler runs on every message, and several
+        # do real work per message -- handler_loud's count()+offset fetch,
+        # handler_responder's NLTK tokenize, handler_sparkles' read-modify-
+        # write. One span each is what makes it obvious which one costs.
         for handler in self.messages:
-            handler.message(*args, dispatcher=self, **kwargs)
+            name = handler.__class__.__name__
+            with tracer.start_as_current_span(f'message.{name}'):
+                handler.message(*args, dispatcher=self, **kwargs)
 
     @dispatch
     def removed(self, *args, **kwargs):
@@ -356,8 +393,15 @@ class Dispatcher(object):
                         bot_user_id=workspace.bot_user_id,
                         channel=channel,
                     )
-                    handler.cron(context, cron=cron, dispatcher=self)
-                except Exception:
+                    name = handler.__class__.__name__
+                    with tracer.start_as_current_span(f'cron.{name}') as span:
+                        span.set_attribute('simone.cron.when', cron['when'])
+                        span.set_attribute(
+                            'simone.cron.channel', cron['channel']
+                        )
+                        handler.cron(context, cron=cron, dispatcher=self)
+                except Exception as e:
+                    trace.get_current_span().record_exception(e)
                     self.log.exception(
                         'tick: cron=%s failed for workspace=%s', cron, workspace
                     )
@@ -372,6 +416,15 @@ class Cron(Thread):
 
     def run(self):
         self.log.info('run: starting')
+        # Detach from whatever context started this thread. ThreadingInstrumentor
+        # (simone/tracing.py) propagates the spawning context into new threads,
+        # which is exactly what we want for slack_bolt's listener executor and
+        # wrong here: this thread lives for the life of the process, so anything
+        # it inherited would parent every tick, forever, to one long-finished
+        # span. Today Cron is started from simone/wsgi.py at import, when no
+        # span is active, so this changes nothing -- it's here so that stays
+        # true if it's ever started from somewhere else.
+        otel_context.attach(Context())
         self.stopper = Event()
         running = True
         while running:
@@ -382,13 +435,23 @@ class Cron(Thread):
             # the thread as well as wrap each time around in calls to check
             # our database connections health (name doesn't match
             # functionality)
-            close_old_connections()
-            try:
-                self.dispatcher.tick(datetime.utcnow())
-            except Exception:
-                self.log.exception('run: tick failed')
-            finally:
+            #
+            # A root span per tick -- its own trace, since nothing requested
+            # it. SERVER-ish work with no caller, so INTERNAL is the honest
+            # kind. close_old_connections is inside it because reconnect cost
+            # is part of what a tick spends.
+            with tracer.start_as_current_span(
+                'cron.tick', kind=SpanKind.INTERNAL
+            ) as span:
                 close_old_connections()
+                try:
+                    self.dispatcher.tick(datetime.utcnow())
+                except Exception as e:
+                    span.record_exception(e)
+                    span.set_status(Status(StatusCode.ERROR))
+                    self.log.exception('run: tick failed')
+                finally:
+                    close_old_connections()
             elapsed = time() - start
             pause = 60 - elapsed
             self.log.debug('run:   elapsed=%f, pause=%f', elapsed, pause)

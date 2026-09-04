@@ -50,50 +50,14 @@ def post_fork(server, worker):
     thread's state does. A TracerProvider built in the master would leave every
     worker holding a processor whose export thread only ever existed in the
     parent, silently exporting nothing. post_fork runs inside each freshly
-    forked worker, before it imports simone.wsgi, so DjangoInstrumentor is in
-    place before Django's own URL resolution and middleware load.
+    forked worker, before it imports simone.wsgi, so the instrumentation is in
+    place before Django's own machinery loads -- and, for the DB spans, before
+    Django opens its first connection.
 
-    Spans go straight to Tempo's OTLP/HTTP receiver (OTEL_EXPORTER_OTLP_ENDPOINT
-    in the compose environment), not through logit -- there is nothing logit
-    would add to spans an SDK already produced. Each one is a child of the span
-    logit lifts from nginx's access log line for the same request: nginx sets a
-    traceparent header and the default W3C propagator picks it up here with no
-    code of our own.
-
-    A no-op when OTEL_EXPORTER_OTLP_ENDPOINT is unset, so running outside the
-    compose stack (script/run directly, the dev docker-compose.yml) doesn't
-    need a collector listening or spend every request's teardown waiting on a
-    connection refused.
+    The setup itself lives in simone/tracing.py so the management commands and
+    a dev server can opt in the same way. It's a no-op when
+    OTEL_EXPORTER_OTLP_ENDPOINT is unset.
     '''
-    if not os.environ.get('OTEL_EXPORTER_OTLP_ENDPOINT'):
-        return
+    from simone.tracing import configure_tracing
 
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-        OTLPSpanExporter,
-    )
-    from opentelemetry.instrumentation.django import DjangoInstrumentor
-    from opentelemetry.instrumentation.logging import LoggingInstrumentor
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-    # service.name is what lets Tempo resolve a root service for these spans,
-    # matching the `set` component logit stamps onto nginx's own.
-    resource = Resource.create(
-        {
-            'service.name': os.environ.get('OTEL_SERVICE_NAME', 'simone'),
-            'service.namespace': 'xormedia',
-        }
-    )
-    provider = TracerProvider(resource=resource)
-    # The exporter reads OTEL_EXPORTER_OTLP_ENDPOINT itself and appends
-    # /v1/traces per the OTLP spec. This package only speaks protobuf, which
-    # Tempo's receiver accepts natively.
-    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-    trace.set_tracer_provider(provider)
-
-    DjangoInstrumentor().instrument()
-    # Puts the active trace/span id into every log record, so a log line can be
-    # matched back to the trace it happened in.
-    LoggingInstrumentor().instrument(set_logging_format=True)
+    configure_tracing()
