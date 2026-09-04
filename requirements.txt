@@ -33,8 +33,12 @@ opentelemetry-api==1.44.0
 opentelemetry-exporter-otlp-proto-common==1.44.0
 opentelemetry-exporter-otlp-proto-http==1.44.0
 opentelemetry-instrumentation==0.65b0
+opentelemetry-instrumentation-dbapi==0.65b0
 opentelemetry-instrumentation-django==0.65b0
 opentelemetry-instrumentation-logging==0.65b0
+opentelemetry-instrumentation-requests==0.65b0
+opentelemetry-instrumentation-threading==0.65b0
+opentelemetry-instrumentation-urllib==0.65b0
 opentelemetry-instrumentation-wsgi==0.65b0
 opentelemetry-proto==1.44.0
 opentelemetry-sdk==1.44.0
