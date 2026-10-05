@@ -52,6 +52,6 @@ tomli==2.4.1; python_version=='3.10'
 tqdm==4.70.0
 typing-extensions==4.16.0
 unearth==0.18.2
-urllib3==2.7.0
+urllib3==2.8.0
 word2number==1.1
 zipp==4.1.0; python_version=='3.10'
